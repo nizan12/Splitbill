@@ -211,12 +211,22 @@ apiRouter.post("/scan-receipt", async (req, res) => {
     const promptText =
       `Ekstrak struk berikut (terdiri dari ${imageList.length > 0 ? imageList.length + ' foto struk' : 'teks struk'}) menjadi satu objek JSON murni dengan format persis:\n` +
       `{"title":"Nama Toko/Resto","category":"Makan & Minum","items":[{"name":"Nama Menu","qty":1,"unitPrice":25000}],"taxAmount":0,"serviceAmount":0,"deliveryAmount":0,"discountAmount":0}\n` +
-      `Aturan:\n` +
-      `- Jika ada beberapa foto struk (misalnya struk panjang bersambung, halaman 1 & 2, atau beberapa pesanan toko berbeda), gabungkan semua menu ke dalam array items menjadi satu kesatuan utuh.\n` +
-      `- Semua nominal dalam angka bulat Rupiah tanpa tanda titik atau koma (contoh: 45.000 -> 45000, 11.500 -> 11500).\n` +
-      `- unitPrice adalah harga satuan per 1 item (jika tertulis 2x 25.000 = 50.000, maka qty: 2, unitPrice: 25000).\n` +
-      `- Jangan masukkan baris subtotal, total, bayar, atau kembalian ke dalam array items.\n` +
-      `- Jumlahkan taxAmount (pajak), serviceAmount (layanan), deliveryAmount (ongkir), dan discountAmount (diskon) dari seluruh struk yang disertakan.\n` +
+      `PENTING - ATURAN FORMAT NOMINAL & KUANTITAS (QTY):\n` +
+      `1. TANDA TITIK (.) PADA STRUK INDONESIA ADALAH PEMISAH RIBUAN, BUKAN DESIMAL!\n` +
+      `   - Contoh: "4.000 Kg" artinya kuantitas qty = 4000 (empat ribu), JANGAN ditulis 4!\n` +
+      `   - Contoh: "8.000 Pcs" artinya kuantitas qty = 8000 (delapan ribu), JANGAN ditulis 8!\n` +
+      `   - Contoh: "1600 Kg" artinya kuantitas qty = 1600, JANGAN diubah jadi 16!\n` +
+      `   - Contoh: "800 Box" artinya kuantitas qty = 800, JANGAN diubah jadi 8!\n` +
+      `2. VALIDASI MATEMATIKA PER BARIS ITEM:\n` +
+      `   - Pastikan selalu: (qty * unitPrice) harus sama dengan total baris tersebut di struk!\n` +
+      `   - Contoh di struk: "4.000 Kg X 12.500 Rp. 50.000.000".\n` +
+      `     Jika qty=4 & unitPrice=12500, maka 4*12500 = 50.000 (SALAH BESAR!).\n` +
+      `     Yang benar adalah qty=4000 & unitPrice=12500, karena 4000 * 12500 = 50.000.000 (BENAR!).\n` +
+      `3. Jangan pernah memotong angka nol (00 / 000) dari kuantitas (qty) maupun harga satuan (unitPrice)!\n` +
+      `4. Semua nominal harga dalam angka bulat Rupiah (integer tanpa titik atau koma, misal: 12500, 27500).\n` +
+      `5. Jika ada beberapa foto struk, gabungkan semua menu ke dalam array items tanpa menduplikasi.\n` +
+      `6. Jangan masukkan baris subtotal, total akhir, bayar, atau kembalian ke dalam items.\n` +
+      `7. Jumlahkan taxAmount (pajak), serviceAmount (layanan), deliveryAmount (ongkir), dan discountAmount (diskon) dari seluruh struk yang disertakan.\n` +
       (rawText ? `\nTeks tambahan:\n${rawText}` : "");
 
     // Gemini Multimodal best practice: prompt text first, then images
