@@ -3,6 +3,8 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   onAuthStateChanged,
   User,
@@ -94,8 +96,40 @@ async function testConnection() {
 testConnection();
 
 export async function signInWithGoogle(): Promise<User | null> {
-  const result = await signInWithPopup(auth, googleProvider);
-  return result.user;
+  const isMobile =
+    typeof window !== 'undefined' &&
+    /Mobi|Android|iPhone|iPad|iPod|Line|Instagram|FBAN|FBAV|WhatsApp/i.test(
+      navigator.userAgent
+    );
+
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    return result.user;
+  } catch (error: any) {
+    const code = error?.code || '';
+    const message = error?.message || '';
+
+    // If popup was blocked by browser or is in a mobile/in-app webview
+    if (
+      code === 'auth/popup-blocked' ||
+      code === 'auth/cancelled-popup-request' ||
+      message.includes('popup') ||
+      isMobile
+    ) {
+      console.warn('Popup login terblokir di HP. Mengalihkan ke mode Redirect...');
+      await signInWithRedirect(auth, googleProvider);
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+// Automatically resolve redirect login result on page load
+if (typeof window !== 'undefined') {
+  getRedirectResult(auth).catch((err) => {
+    console.warn('Redirect login error:', err);
+  });
 }
 
 export async function logoutGoogle(): Promise<void> {

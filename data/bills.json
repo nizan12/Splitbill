@@ -20,6 +20,29 @@
     "paymentChannels": [],
     "participants": [],
     "items": [],
-    "updatedAt": "2026-10-25T11:34:35.289Z"
+    "updatedAt": "2026-10-25T11:46:16.736Z"
+  },
+  "sb-mvnrotx6": {
+    "id": "sb-mvnrotx6",
+    "title": "",
+    "category": "Makan & Minum",
+    "date": "2026-10-25",
+    "createdAt": "2026-10-25T11:51:32.730Z",
+    "mode": "itemized",
+    "extraRule": "proportional",
+    "taxPercent": 0,
+    "taxAmount": 0,
+    "useTaxPercent": true,
+    "servicePercent": 0,
+    "serviceAmount": 0,
+    "useServicePercent": true,
+    "deliveryAmount": 0,
+    "discountAmount": 0,
+    "notes": "",
+    "creatorName": "",
+    "paymentChannels": [],
+    "participants": [],
+    "items": [],
+    "updatedAt": "2026-10-25T11:51:33.741Z"
   }
 }

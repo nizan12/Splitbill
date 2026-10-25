@@ -80,24 +80,9 @@ export default function App() {
     ? `${BASE_STORAGE_KEY}_${currentUser.uid}`
     : `${BASE_STORAGE_KEY}_guest`;
 
-  const [savedBills, setSavedBills] = useState<SplitBill[]>(() => {
-    try {
-      const raw = localStorage.getItem(`${BASE_STORAGE_KEY}_guest`);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch {
-      // ignore storage errors
-    }
-    return [createEmptyBill()];
-  });
-
-  const [activeBill, setActiveBill] = useState<SplitBill>(
-    () => savedBills[0] || createEmptyBill()
-  );
+  // Riwayat starts empty until user logs in with Google or creates a bill while logged in
+  const [savedBills, setSavedBills] = useState<SplitBill[]>([]);
+  const [activeBill, setActiveBill] = useState<SplitBill>(() => createEmptyBill());
   const [viewMode, setViewMode] = useState<'editor' | 'saved' | 'portal'>('editor');
   // Mobile sub-panel inside editor so thumb users don't have to scroll 2500px
   const [mobileEditorTab, setMobileEditorTab] = useState<'input' | 'summary'>('input');
@@ -265,8 +250,20 @@ export default function App() {
 
   const summary = useMemo(() => calculateSplitBill(activeBill), [activeBill]);
 
+  // Clear obsolete guest local storage on initial load
+  useEffect(() => {
+    try {
+      localStorage.removeItem(`${BASE_STORAGE_KEY}_guest`);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   // Sync activeBill into savedBills, localStorage, Express backend, and Firestore
   useEffect(() => {
+    // If not logged in, do not clutter history with draft bills
+    if (!currentUser) return;
+
     setSavedBills((prev) => {
       const exists = prev.some((b) => b.id === activeBill.id);
       const next = exists
@@ -403,16 +400,15 @@ export default function App() {
     }
     setSavedBills((prev) => {
       const filtered = prev.filter((b) => b.id !== billId);
-      const next = filtered.length > 0 ? filtered : [createEmptyBill()];
       try {
-        localStorage.setItem(storageKey, JSON.stringify(next));
+        localStorage.setItem(storageKey, JSON.stringify(filtered));
       } catch {
         // ignore
       }
       if (activeBill.id === billId) {
-        setActiveBill(next[0]);
+        setActiveBill(filtered[0] || createEmptyBill());
       }
-      return next;
+      return filtered;
     });
   };
 
@@ -833,29 +829,61 @@ export default function App() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-5">
-              {savedBills.map((billItem) => {
-                const itemSummary = calculateSplitBill(billItem);
-                const isCurrent = billItem.id === activeBill.id;
-                return (
-                  <div
-                    key={billItem.id}
-                    className={`bg-white rounded-3xl border p-5 flex flex-col justify-between transition-all shadow-2xs ${
-                      isCurrent
-                        ? 'border-[#00AED6] ring-2 ring-[#00AED6]/20'
-                        : 'border-slate-200 hover:border-slate-300'
-                    }`}
+            {savedBills.length === 0 ? (
+              <div className="bg-white border border-slate-200 rounded-3xl p-8 sm:p-12 text-center mt-6 flex flex-col items-center max-w-md mx-auto shadow-2xs">
+                <div className="w-16 h-16 rounded-full bg-[#00AED6]/10 text-[#00AED6] flex items-center justify-center mb-4">
+                  <History className="w-8 h-8" />
+                </div>
+                <h3 className="text-base sm:text-lg font-extrabold text-slate-900 font-display">
+                  Belum Ada Riwayat Tagihan
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 mt-1.5 max-w-xs leading-relaxed">
+                  {currentUser
+                    ? 'Anda belum memiliki tagihan tersimpan. Buat struk baru atau gunakan scan struk.'
+                    : 'Masuk dengan akun Google untuk menyimpan dan melihat riwayat tagihan Anda secara otomatis di cloud.'}
+                </p>
+                {!currentUser ? (
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    className="mt-5 min-h-[44px] px-6 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-sm transition-all"
                   >
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-xs text-slate-500 flex items-center gap-1.5">
-                          <span className="font-bold text-[#00AED6]">
-                            {billItem.category}
-                          </span>
-                          <span aria-hidden="true">·</span>
-                          <span>{billItem.date}</span>
-                        </div>
-                        {savedBills.length > 1 && (
+                    Masuk dengan Google
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleCreateNewBill}
+                    className="mt-5 min-h-[44px] px-6 py-2.5 rounded-full bg-[#00880D] hover:bg-[#00700B] text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-sm transition-all"
+                  >
+                    <FilePlus2 className="w-4 h-4" />
+                    Buat Struk Baru
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-5">
+                {savedBills.map((billItem) => {
+                  const itemSummary = calculateSplitBill(billItem);
+                  const isCurrent = billItem.id === activeBill.id;
+                  return (
+                    <div
+                      key={billItem.id}
+                      className={`bg-white rounded-3xl border p-5 flex flex-col justify-between transition-all shadow-2xs ${
+                        isCurrent
+                          ? 'border-[#00AED6] ring-2 ring-[#00AED6]/20'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                            <span className="font-bold text-[#00AED6]">
+                              {billItem.category}
+                            </span>
+                            <span aria-hidden="true">·</span>
+                            <span>{billItem.date}</span>
+                          </div>
                           <button
                             type="button"
                             onClick={() => handleDeleteSavedBill(billItem.id)}
@@ -864,54 +892,54 @@ export default function App() {
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                        )}
+                        </div>
+                        <h2 className="text-base font-extrabold text-slate-900 font-display mt-1">
+                          {billItem.title || 'Split Bill Tanpa Judul'}
+                        </h2>
+                        <div className="mt-3 pt-3 border-t border-dashed border-slate-200 flex items-baseline justify-between">
+                          <span className="text-xs text-slate-500">Total Struk</span>
+                          <span className="text-base font-extrabold font-mono tabular-nums text-slate-900">
+                            {formatRupiah(itemSummary.grandTotal)}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 flex items-center justify-between text-xs">
+                          <span className="text-slate-500">Status Lunas</span>
+                          <span className="font-mono tabular-nums font-bold text-[#00880D]">
+                            {itemSummary.paidCount}/{billItem.participants.length} Orang (
+                            {formatRupiah(itemSummary.totalPaidAmount)})
+                          </span>
+                        </div>
                       </div>
-                      <h2 className="text-base font-extrabold text-slate-900 font-display mt-1">
-                        {billItem.title || 'Split Bill Tanpa Judul'}
-                      </h2>
-                      <div className="mt-3 pt-3 border-t border-dashed border-slate-200 flex items-baseline justify-between">
-                        <span className="text-xs text-slate-500">Total Struk</span>
-                        <span className="text-base font-extrabold font-mono tabular-nums text-slate-900">
-                          {formatRupiah(itemSummary.grandTotal)}
-                        </span>
-                      </div>
-                      <div className="mt-1.5 flex items-center justify-between text-xs">
-                        <span className="text-slate-500">Status Lunas</span>
-                        <span className="font-mono tabular-nums font-bold text-[#00880D]">
-                          {itemSummary.paidCount}/{billItem.participants.length} Orang (
-                          {formatRupiah(itemSummary.totalPaidAmount)})
-                        </span>
-                      </div>
-                    </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveBill(billItem);
-                          setViewMode('editor');
-                          setMobileEditorTab('input');
-                        }}
-                        className="flex-1 min-h-[42px] py-2 px-3 rounded-full bg-[#00AED6] hover:bg-[#0099BD] text-white text-xs font-bold transition-colors whitespace-nowrap"
-                      >
-                        Edit Struk
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveBill(billItem);
-                          setPortalParticipantId(undefined);
-                          setViewMode('portal');
-                        }}
-                        className="min-h-[42px] py-2 px-4 rounded-full border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors whitespace-nowrap"
-                      >
-                        Buka Link
-                      </button>
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveBill(billItem);
+                            setViewMode('editor');
+                            setMobileEditorTab('input');
+                          }}
+                          className="flex-1 min-h-[42px] py-2 px-3 rounded-full bg-[#00AED6] hover:bg-[#0099BD] text-white text-xs font-bold transition-colors whitespace-nowrap"
+                        >
+                          Edit Struk
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveBill(billItem);
+                            setPortalParticipantId(undefined);
+                            setViewMode('portal');
+                          }}
+                          className="min-h-[42px] py-2 px-4 rounded-full border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors whitespace-nowrap"
+                        >
+                          Buka Link
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ) : (
           /* MOBILE-FIRST SPLIT BILL EDITOR WORKSPACE */
