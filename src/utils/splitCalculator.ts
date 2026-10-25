@@ -344,7 +344,10 @@ export function buildShareablePaymentLink(
   participantId?: string,
   includeDataFallback: boolean = false
 ): string {
-  const baseUrl = window.location.origin + window.location.pathname;
+  const baseUrl =
+    typeof window !== 'undefined' && window.location
+      ? window.location.origin + window.location.pathname
+      : 'https://patungans.vercel.app/';
   const params = new URLSearchParams();
   params.set('pay', bill.id);
   if (participantId) {
