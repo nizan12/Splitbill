@@ -184,11 +184,31 @@ export default function App() {
           creatorName: prev.creatorName || user.displayName || '',
         }));
       }
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Gagal masuk dengan Google.';
-      if (!message.includes('popup-closed-by-user')) {
-        setAuthError('Login Google dibatalkan atau gagal. Silakan coba lagi.');
+    } catch (err: any) {
+      console.error('Google Sign-In Error:', err);
+      const code = err?.code || '';
+      const message = err?.message || '';
+
+      if (code === 'auth/popup-closed-by-user') {
+        // User closed popup deliberately
+        return;
+      }
+
+      if (code === 'auth/unauthorized-domain' || message.includes('unauthorized-domain')) {
+        const host = window.location.hostname;
+        setAuthError(
+          `Domain "${host}" belum diotorisasi di Firebase. Gunakan http://localhost:3000 atau tambahkan "${host}" di Firebase Console > Authentication > Settings > Authorized domains.`
+        );
+      } else if (code === 'auth/operation-not-allowed') {
+        setAuthError(
+          'Metode login Google belum diaktifkan di Firebase Console. Buka Authentication > Sign-in method > aktifkan Google.'
+        );
+      } else if (code === 'auth/popup-blocked') {
+        setAuthError('Popup diblokir oleh browser. Silakan izinkan popup untuk situs ini.');
+      } else {
+        setAuthError(
+          `Login Google gagal (${code || 'error'}): ${message || 'Silakan coba lagi.'}`
+        );
       }
     }
   };
