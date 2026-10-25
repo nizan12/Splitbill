@@ -1,0 +1,6 @@
+{
+  "name": "PatunganPay — Split Bill & Link Pembayaran Otomatis",
+  "description": "Aplikasi web pembagi tagihan otomatis ala GoPay Split Bill dengan fitur scan struk pintar, hitung proporsional pajak dan diskon, serta pembuatan link pembayaran instan untuk teman.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

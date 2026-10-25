@@ -1,0 +1,103 @@
+{
+  "entities": {
+    "UserProfileDoc": {
+      "title": "UserProfileDoc",
+      "description": "Authenticated user profile stored upon Google sign-in.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name from Google profile.",
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "description": "User verified email address.",
+          "maxLength": 256
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "User avatar URL.",
+          "maxLength": 500
+        }
+      },
+      "required": ["uid", "displayName", "email"]
+    },
+    "SplitBillDoc": {
+      "title": "SplitBillDoc",
+      "description": "A split bill document created by an authenticated user.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the split bill.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the bill creator.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerEmail": {
+          "type": "string",
+          "description": "Verified email of the bill creator.",
+          "maxLength": 256
+        },
+        "title": {
+          "type": "string",
+          "description": "Title or merchant name of the bill.",
+          "maxLength": 200
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the bill.",
+          "maxLength": 100
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the bill (YYYY-MM-DD).",
+          "maxLength": 40
+        },
+        "creatorName": {
+          "type": "string",
+          "description": "Display name of the creator.",
+          "maxLength": 120
+        },
+        "grandTotal": {
+          "type": "number",
+          "description": "Calculated grand total in IDR."
+        },
+        "paidCount": {
+          "type": "number",
+          "description": "Number of participants who have paid."
+        },
+        "participantCount": {
+          "type": "number",
+          "description": "Total number of participants."
+        }
+      },
+      "required": ["id", "ownerId", "title", "category", "date", "creatorName", "grandTotal"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfileDoc" },
+      "description": "Stores private authenticated user profile information."
+    },
+    "/bills/{billId}": {
+      "schema": { "$ref": "#/entities/SplitBillDoc" },
+      "description": "Stores split bill metadata owned by the authenticated user."
+    }
+  }
+}

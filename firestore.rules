@@ -1,0 +1,148 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+        'uid',
+        'displayName',
+        'email',
+        'photoURL',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'uid',
+        'displayName',
+        'email',
+        'photoURL',
+        'updatedAt'
+      ]) &&
+      data.uid is string && data.uid == request.auth.uid && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+      data.displayName is string && data.displayName.size() <= 120 &&
+      data.email is string && data.email.size() <= 256 &&
+      data.photoURL is string && data.photoURL.size() <= 500 &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidBill(data) {
+      return data.keys().hasAll([
+        'id',
+        'ownerId',
+        'title',
+        'category',
+        'date',
+        'creatorName',
+        'grandTotal',
+        'paidCount',
+        'participantCount',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'ownerId',
+        'ownerEmail',
+        'title',
+        'category',
+        'date',
+        'creatorName',
+        'grandTotal',
+        'paidCount',
+        'participantCount',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+      data.ownerId is string && data.ownerId == request.auth.uid && data.ownerId.size() <= 128 &&
+      (!('ownerEmail' in data) || (data.ownerEmail is string && data.ownerEmail.size() <= 256)) &&
+      data.title is string && data.title.size() <= 200 &&
+      data.category is string && data.category.size() <= 100 &&
+      data.date is string && data.date.size() <= 40 &&
+      data.creatorName is string && data.creatorName.size() <= 120 &&
+      data.grandTotal is number && data.grandTotal >= 0 &&
+      data.paidCount is number && data.paidCount >= 0 &&
+      data.participantCount is number && data.participantCount >= 0 &&
+      (!('createdAt' in data) || data.createdAt is timestamp) &&
+      data.updatedAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && userId == request.auth.uid;
+
+      allow create: if isSignedIn() &&
+        isValidId(userId) &&
+        userId == request.auth.uid &&
+        isValidUserProfile(incoming()) &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isSignedIn() &&
+        isValidId(userId) &&
+        userId == request.auth.uid &&
+        isValidUserProfile(incoming()) &&
+        existing().uid == request.auth.uid &&
+        incoming().uid == existing().uid &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName',
+          'email',
+          'photoURL',
+          'updatedAt'
+        ]);
+    }
+
+    match /bills/{billId} {
+      allow get: if isSignedIn() && isValidId(billId) && existing().ownerId == request.auth.uid;
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+
+      allow create: if isSignedIn() &&
+        isValidId(billId) &&
+        isValidBill(incoming()) &&
+        incoming().id == billId &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isSignedIn() &&
+        isValidId(billId) &&
+        isValidBill(incoming()) &&
+        existing().ownerId == request.auth.uid &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().id == existing().id &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'ownerEmail',
+          'title',
+          'category',
+          'date',
+          'creatorName',
+          'grandTotal',
+          'paidCount',
+          'participantCount',
+          'createdAt',
+          'updatedAt'
+        ]);
+
+      allow delete: if isSignedIn() &&
+        isValidId(billId) &&
+        existing().ownerId == request.auth.uid;
+    }
+  }
+}
