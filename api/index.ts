@@ -172,12 +172,21 @@ apiRouter.patch("/bills/:id/pay", (req, res) => {
   }
 });
 
-// Scan Receipt via Gemini Vision / OCR
+// Scan Receipt via Gemini Vision / OCR (Supports 1 or multiple receipt images)
 apiRouter.post("/scan-receipt", async (req, res) => {
   try {
-    const { imageBase64, mimeType, rawText } = req.body;
-    if (!imageBase64 && !rawText) {
-      res.status(400).json({ error: "Harap unggah foto struk atau masukkan teks struk." });
+    const { imageBase64, mimeType, images, rawText } = req.body;
+
+    // Normalise images array (supports single imageBase64 or array of images)
+    const imageList: Array<{ imageBase64: string; mimeType?: string }> = [];
+    if (Array.isArray(images) && images.length > 0) {
+      imageList.push(...images.filter((img) => img && img.imageBase64));
+    } else if (imageBase64) {
+      imageList.push({ imageBase64, mimeType: mimeType || "image/jpeg" });
+    }
+
+    if (imageList.length === 0 && !rawText) {
+      res.status(400).json({ error: "Harap unggah minimal satu foto struk atau masukkan teks struk." });
       return;
     }
 
@@ -200,23 +209,26 @@ apiRouter.post("/scan-receipt", async (req, res) => {
     });
 
     const parts: any[] = [];
-    if (imageBase64) {
+    for (const img of imageList) {
       parts.push({
         inlineData: {
-          data: imageBase64,
-          mimeType: mimeType || "image/jpeg",
+          data: img.imageBase64,
+          mimeType: img.mimeType || "image/jpeg",
         },
       });
     }
+
     parts.push({
       text:
-        `Ekstrak struk berikut menjadi objek JSON murni dengan format persis:\n` +
+        `Ekstrak struk berikut (terdiri dari ${imageList.length > 0 ? imageList.length + ' foto struk' : 'teks struk'}) menjadi satu objek JSON murni dengan format persis:\n` +
         `{"title":"Nama Toko/Resto","category":"Makan & Minum","items":[{"name":"Nama Menu","qty":1,"unitPrice":25000}],"taxAmount":0,"serviceAmount":0,"deliveryAmount":0,"discountAmount":0}\n` +
         `Aturan:\n` +
+        `- Jika ada beberapa foto struk (misalnya struk panjang bersambung, halaman 1 & 2, atau beberapa pesanan), gabungkan semua menu ke dalam array items menjadi satu kesatuan utuh.\n` +
         `- Semua nominal dalam angka bulat Rupiah (contoh: 45.000 -> 45000).\n` +
         `- unitPrice adalah harga satuan per 1 item (jika tertulis 2x 25.000 = 50.000, maka qty: 2, unitPrice: 25000).\n` +
         `- Jangan masukkan subtotal/total akhir ke dalam array items.\n` +
-        (rawText ? `\nTeks struk:\n${rawText}` : ""),
+        `- Jumlahkan taxAmount, serviceAmount, deliveryAmount, dan discountAmount dari seluruh struk yang disertakan.\n` +
+        (rawText ? `\nTeks tambahan:\n${rawText}` : ""),
     });
 
     const response = await ai.models.generateContent({
