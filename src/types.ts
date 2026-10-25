@@ -39,6 +39,7 @@ export interface PaymentChannel {
   accountHolder: string;
   enabled: boolean;
   qrisImageUrl?: string;
+  qrisRawString?: string;
 }
 
 export interface SplitBill {

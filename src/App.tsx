@@ -34,6 +34,7 @@ import {
   decodeBillFromUrlParam,
   compressImageToDataUrl,
 } from './utils/splitCalculator';
+import { decodeQRFromImage, parseQRIS } from './utils/qris';
 import { ReceiptScannerModal } from './components/ReceiptScannerModal';
 import { ShareLinkModal } from './components/ShareLinkModal';
 import { FriendPaymentPortal } from './components/FriendPaymentPortal';
@@ -108,6 +109,9 @@ export default function App() {
   const [newChannelNumber, setNewChannelNumber] = useState('');
   const [newChannelHolder, setNewChannelHolder] = useState('');
   const [newChannelQrisImage, setNewChannelQrisImage] = useState<string | undefined>(
+    undefined
+  );
+  const [newChannelQrisRaw, setNewChannelQrisRaw] = useState<string | undefined>(
     undefined
   );
   const [showAddChannel, setShowAddChannel] = useState(false);
@@ -608,6 +612,7 @@ export default function App() {
       accountHolder: holder,
       enabled: true,
       qrisImageUrl: isQris ? newChannelQrisImage : undefined,
+      qrisRawString: isQris ? newChannelQrisRaw : undefined,
     };
     setActiveBill((prev) => ({
       ...prev,
@@ -616,6 +621,7 @@ export default function App() {
     setNewChannelNumber('');
     setNewChannelHolder('');
     setNewChannelQrisImage(undefined);
+    setNewChannelQrisRaw(undefined);
     setShowAddChannel(false);
   };
 
@@ -624,8 +630,33 @@ export default function App() {
     if (!file) return;
     try {
       const compressedDataUrl = await compressImageToDataUrl(file, 680, 0.85);
+
+      // Decode QRIS string and extract merchant info with jsQR
+      let rawQris: string | undefined = undefined;
+      let detectedMerchant: string | undefined = undefined;
+      try {
+        const decoded = await decodeQRFromImage(file);
+        if (decoded) {
+          rawQris = decoded;
+          try {
+            const parsed = parseQRIS(decoded);
+            if (parsed.merchantName) {
+              detectedMerchant = parsed.merchantName;
+            }
+          } catch {
+            // parse info error ignored
+          }
+        }
+      } catch (err) {
+        console.warn('Gagal decode QRIS dari file:', err);
+      }
+
       if (uploadingQrisChannelId === '__NEW_CHANNEL__') {
         setNewChannelQrisImage(compressedDataUrl);
+        setNewChannelQrisRaw(rawQris);
+        if (detectedMerchant && !newChannelHolder) {
+          setNewChannelHolder(detectedMerchant);
+        }
       } else if (uploadingQrisChannelId === '__QUICK_QRIS__') {
         setActiveBill((prev) => {
           const hasQris = prev.paymentChannels.some((c) => c.provider === 'QRIS');
@@ -634,7 +665,17 @@ export default function App() {
               ...prev,
               paymentChannels: prev.paymentChannels.map((c) =>
                 c.provider === 'QRIS'
-                  ? { ...c, enabled: true, qrisImageUrl: compressedDataUrl }
+                  ? {
+                      ...c,
+                      enabled: true,
+                      qrisImageUrl: compressedDataUrl,
+                      qrisRawString: rawQris || c.qrisRawString,
+                      accountHolder:
+                        detectedMerchant ||
+                        c.accountHolder ||
+                        prev.creatorName ||
+                        'Penerima',
+                    }
                   : c
               ),
             };
@@ -644,9 +685,13 @@ export default function App() {
             provider: 'QRIS',
             accountNumber: 'QRIS Pribadi',
             accountHolder:
-              prev.creatorName || currentUser?.displayName || 'Penerima',
+              detectedMerchant ||
+              prev.creatorName ||
+              currentUser?.displayName ||
+              'Penerima',
             enabled: true,
             qrisImageUrl: compressedDataUrl,
+            qrisRawString: rawQris,
           };
           return {
             ...prev,
@@ -658,7 +703,13 @@ export default function App() {
           ...prev,
           paymentChannels: prev.paymentChannels.map((c) =>
             c.id === uploadingQrisChannelId
-              ? { ...c, enabled: true, qrisImageUrl: compressedDataUrl }
+              ? {
+                  ...c,
+                  enabled: true,
+                  qrisImageUrl: compressedDataUrl,
+                  qrisRawString: rawQris || c.qrisRawString,
+                  accountHolder: detectedMerchant || c.accountHolder,
+                }
               : c
           ),
         }));
@@ -2439,11 +2490,20 @@ export default function App() {
                                   className="w-12 h-12 rounded-lg object-contain border border-slate-200 bg-white p-0.5 shrink-0"
                                 />
                                 <div className="min-w-0">
-                                  <span className="text-xs font-bold text-[#00880D] block">
-                                    Gambar QRIS Terpasang
-                                  </span>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-xs font-bold text-[#00880D]">
+                                      Gambar QRIS Terpasang
+                                    </span>
+                                    {ch.qrisRawString && (
+                                      <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 inline-flex items-center gap-0.5">
+                                        ⚡ Dinamis Aktif
+                                      </span>
+                                    )}
+                                  </div>
                                   <span className="text-[11px] text-slate-500 block truncate">
-                                    Tampil di link pembayaran teman
+                                    {ch.qrisRawString
+                                      ? 'Nominal otomatis terkunci saat discan teman'
+                                      : 'Tampil di link pembayaran teman'}
                                   </span>
                                 </div>
                               </div>

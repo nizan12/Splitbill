@@ -21,6 +21,7 @@ import {
   PaymentStatus,
 } from '../types';
 import { formatRupiah, buildShareablePaymentLink } from '../utils/splitCalculator';
+import { DynamicQRISCard } from './DynamicQRISCard';
 
 interface FriendPaymentPortalProps {
   bill: SplitBill;
@@ -777,84 +778,24 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
               </div>
             )}
 
-            {/* Creator's Uploaded Custom QRIS Image */}
+            {/* Dynamic & Static QRIS Card */}
             {showQrisModal &&
               enabledChannels.some((c) => c.provider === 'QRIS') &&
               (() => {
                 const qrisChannel = enabledChannels.find(
                   (c) => c.provider === 'QRIS'
                 );
-                const customQrisUrl = qrisChannel?.qrisImageUrl;
+                if (!qrisChannel) return null;
 
                 return (
-                  <div className="mt-4 p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white text-center">
-                    <div className="text-xs font-extrabold text-slate-900">
-                      QRIS ·{' '}
-                      {(
-                        qrisChannel?.accountHolder ||
-                        bill.creatorName ||
-                        'Penerima'
-                      ).toUpperCase()}
-                    </div>
-                    <div className="text-xs text-slate-500 mt-0.5">
-                      Nominal Bayar:{' '}
-                      <span className="font-mono font-extrabold text-[#00880D]">
-                        {formatRupiah(transferAmount)}
-                      </span>
-                    </div>
-
-                    {customQrisUrl ? (
-                      <div className="my-3.5">
-                        <div className="mx-auto max-w-[240px] p-2.5 bg-white border border-slate-200 rounded-2xl shadow-2xs">
-                          <img
-                            src={customQrisUrl}
-                            alt={`QRIS ${
-                              qrisChannel?.accountHolder || bill.creatorName
-                            }`}
-                            referrerPolicy="no-referrer"
-                            className="w-full h-auto max-h-64 object-contain rounded-xl mx-auto"
-                          />
-                        </div>
-                        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-                          <a
-                            href={customQrisUrl}
-                            download={`QRIS-${(
-                              qrisChannel?.accountHolder ||
-                              bill.creatorName ||
-                              'SplitBill'
-                            ).replace(/\s+/g, '-')}.jpg`}
-                            className="min-h-[40px] px-4 py-2 rounded-full bg-[#00AED6] hover:bg-[#0099BD] text-white text-xs font-extrabold inline-flex items-center gap-1.5 transition-colors"
-                          >
-                            <QrCode className="w-3.5 h-3.5" />
-                            Unduh QRIS
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleCopy(String(transferAmount), 'qris-nominal')
-                            }
-                            className="min-h-[40px] px-4 py-2 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold inline-flex items-center gap-1.5 transition-colors"
-                          >
-                            {copiedField === 'qris-nominal' ? (
-                              <>
-                                <Check className="w-3.5 h-3.5 text-[#00880D]" />
-                                Nominal Disalin
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3.5 h-3.5" />
-                                Salin Nominal
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="my-4 p-5 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-500">
-                        Pembuat Split Bill belum mengunggah file gambar QRIS.
-                      </div>
-                    )}
-                  </div>
+                  <DynamicQRISCard
+                    qrisChannel={qrisChannel}
+                    transferAmount={transferAmount}
+                    participantName={activeBreakdown.participant.name}
+                    creatorName={bill.creatorName}
+                    onCopy={handleCopy}
+                    copiedField={copiedField}
+                  />
                 );
               })()}
           </div>

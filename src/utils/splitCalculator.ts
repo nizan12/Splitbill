@@ -238,7 +238,13 @@ export function encodeBillToUrlParam(bill: SplitBill): string {
       ds: bill.discountAmount || 0,
       k: (bill.paymentChannels || [])
         .filter((c) => c.enabled)
-        .map((c) => [c.id, c.provider, c.accountNumber, c.accountHolder]),
+        .map((c) => [
+          c.id,
+          c.provider,
+          c.accountNumber,
+          c.accountHolder,
+          c.qrisRawString || '',
+        ]),
       p: (bill.participants || []).map((p) => [
         p.id,
         p.name,
@@ -309,6 +315,7 @@ export function decodeBillFromUrlParam(encoded: string): SplitBill | null {
               accountNumber: c[2] || '',
               accountHolder: c[3] || '',
               enabled: true,
+              qrisRawString: c[4] || undefined,
             }))
           : [],
         participants: Array.isArray(parsed.p)
