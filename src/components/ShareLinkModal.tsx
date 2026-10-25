@@ -1,7 +1,21 @@
-import React, { useState } from 'react';
-import { Copy, Check, X, ExternalLink, MessageSquareShare, Link2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Copy,
+  Check,
+  X,
+  ExternalLink,
+  MessageSquareShare,
+  Link2,
+  Send,
+  Sparkles,
+  Loader2,
+} from 'lucide-react';
 import { SplitBill, BillCalculationSummary } from '../types';
-import { buildShareablePaymentLink, formatRupiah } from '../utils/splitCalculator';
+import {
+  buildShareablePaymentLink,
+  formatRupiah,
+  fetchShortenedUrl,
+} from '../utils/splitCalculator';
 
 interface ShareLinkModalProps {
   isOpen: boolean;
@@ -20,13 +34,47 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
 }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [selectedParticipantId, setSelectedParticipantId] = useState<string>('all');
+  const [displayLink, setDisplayLink] = useState<string>('');
+  const [isShortening, setIsShortening] = useState<boolean>(false);
+
+  // Immediate base direct link (e.g. https://domain/?pay=sb-123&p=p-1)
+  const directLink = buildShareablePaymentLink(
+    bill,
+    selectedParticipantId === 'all' ? undefined : selectedParticipantId,
+    false
+  );
+
+  // Make sure the bill is saved to backend when opening share modal
+  useEffect(() => {
+    if (!isOpen) return;
+    fetch('/api/bills', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bill),
+    }).catch(() => {});
+  }, [isOpen, bill]);
+
+  // Generate ultra-short link automatically
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+    setDisplayLink(directLink);
+    setIsShortening(true);
+
+    fetchShortenedUrl(directLink).then((shortUrl) => {
+      if (isMounted) {
+        setDisplayLink(shortUrl);
+        setIsShortening(false);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, directLink]);
 
   if (!isOpen) return null;
-
-  const activeLink = buildShareablePaymentLink(
-    bill,
-    selectedParticipantId === 'all' ? undefined : selectedParticipantId
-  );
 
   const primaryChannel =
     bill.paymentChannels.find((c) => c.enabled) || bill.paymentChannels[0];
@@ -70,7 +118,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
     }
     lines.push('');
     lines.push('Cek rincian menu kamu & konfirmasi pembayaran langsung di link ini:');
-    lines.push(activeLink);
+    lines.push(displayLink || directLink);
     return lines.join('\n');
   };
 
@@ -91,17 +139,30 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
     }
   };
 
+  const handleOpenWhatsApp = () => {
+    const text = generateChatMessage();
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto">
       <div className="bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-xl max-h-[92vh] overflow-y-auto">
         <div className="w-10 h-1.5 bg-slate-200 rounded-full mx-auto mb-3 sm:hidden" />
+        
         <div className="flex items-center justify-between pb-3.5 border-b border-slate-200">
           <div>
-            <h2 className="text-base sm:text-lg font-extrabold text-slate-900 font-display">
-              Bagikan Link Pembayaran Otomatis
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-extrabold text-slate-900 font-display">
+                Bagikan Link Pembayaran
+              </h2>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#00880D]/10 text-[#00880D] flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                Link Pendek
+              </span>
+            </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Teman yang membuka link dapat melihat rincian pesanannya & menandai lunas
+              Teman yang membuka link dapat melihat rincian pesanannya & konfirmasi pembayaran
             </p>
           </div>
           <button
@@ -149,26 +210,35 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
             </div>
           </div>
 
-          {/* Direct Shareable Link Box */}
+          {/* Direct Short Link Box */}
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
             <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
               <span className="flex items-center gap-1.5 font-bold text-slate-700">
                 <Link2 className="w-3.5 h-3.5 text-[#00880D]" />
-                Link Tagihan Interaktif
+                Link Singkat Siap Kirim
               </span>
-              <span className="text-[11px]">Tersimpan otomatis</span>
+              <span className="text-[11px] font-mono text-slate-500 flex items-center gap-1">
+                {isShortening ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin text-[#00AED6]" />
+                    Memperpendek link...
+                  </>
+                ) : (
+                  `${displayLink.length} karakter`
+                )}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <input
                 type="text"
                 readOnly
-                value={activeLink}
-                className="w-full min-h-[42px] px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-mono text-slate-700 focus:outline-none"
+                value={displayLink}
+                className="w-full min-h-[42px] px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-mono text-slate-700 focus:outline-none select-all"
               />
               <button
                 type="button"
-                onClick={() => handleCopy(activeLink, 'link')}
-                className="min-h-[42px] px-4 py-2 rounded-full bg-[#00880D] hover:bg-[#00700B] text-white text-xs font-extrabold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0"
+                onClick={() => handleCopy(displayLink, 'link')}
+                className="min-h-[42px] px-4 py-2 rounded-full bg-[#00880D] hover:bg-[#00700B] text-white text-xs font-extrabold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 shadow-xs active:scale-[0.98]"
               >
                 {copiedKey === 'link' ? (
                   <>
@@ -218,6 +288,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
             />
           </div>
 
+          {/* Actions Bar */}
           <div className="pt-1 flex flex-col sm:flex-row items-center justify-between gap-2.5">
             <button
               type="button"
@@ -232,22 +303,14 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
               <ExternalLink className="w-4 h-4" />
               Buka Tampilan Link Bayar
             </button>
+            
             <button
               type="button"
-              onClick={() => handleCopy(generateChatMessage(), 'chat-btn')}
-              className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-full bg-[#00AED6] hover:bg-[#0099BD] text-white text-xs font-extrabold flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
+              onClick={handleOpenWhatsApp}
+              className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-full bg-[#00880D] hover:bg-[#00700B] text-white text-xs font-extrabold flex items-center justify-center gap-2 transition-all whitespace-nowrap shadow-xs active:scale-[0.98]"
             >
-              {copiedKey === 'chat-btn' ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  Teks & Link Berhasil Disalin
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  Salin Pesan + Link Pembayaran
-                </>
-              )}
+              <Send className="w-4 h-4" />
+              Kirim ke WhatsApp
             </button>
           </div>
         </div>

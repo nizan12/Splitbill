@@ -172,6 +172,37 @@ apiRouter.patch("/bills/:id/pay", (req, res) => {
   }
 });
 
+// Shorten URL via TinyURL for compact social sharing
+apiRouter.get("/shorten", async (req, res) => {
+  try {
+    const longUrl = req.query.url as string;
+    if (!longUrl) {
+      res.status(400).json({ error: "Parameter url diperlukan." });
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+
+    const response = await fetch(
+      `https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`,
+      { signal: controller.signal }
+    );
+    clearTimeout(timeout);
+
+    if (response.ok) {
+      const shortUrl = (await response.text()).trim();
+      if (shortUrl.startsWith("http")) {
+        res.json({ shortUrl });
+        return;
+      }
+    }
+    res.json({ shortUrl: longUrl });
+  } catch {
+    res.json({ shortUrl: (req.query.url as string) || "" });
+  }
+});
+
 // Scan Receipt via Gemini Vision / OCR (Supports 1 or multiple receipt images)
 apiRouter.post("/scan-receipt", async (req, res) => {
   try {

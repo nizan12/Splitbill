@@ -218,29 +218,44 @@ export function compressImageToDataUrl(
   });
 }
 
-// Encode bill into URL-safe base64 string so shared links work anywhere without requiring login
+// Compact schema for ultra-short URLs
 export function encodeBillToUrlParam(bill: SplitBill): string {
   try {
-    // Strip heavy base64 images from the query param if > 4KB so URL stays short;
-    // the full qrisImageUrl and proofImageUrl are persisted on /api/bills/:id
-    const lightBill: SplitBill = {
-      ...bill,
-      paymentChannels: bill.paymentChannels.map((ch) => ({
-        ...ch,
-        qrisImageUrl:
-          ch.qrisImageUrl && ch.qrisImageUrl.length > 4000
-            ? undefined
-            : ch.qrisImageUrl,
-      })),
-      participants: bill.participants.map((p) => ({
-        ...p,
-        proofImageUrl:
-          p.proofImageUrl && p.proofImageUrl.length > 4000
-            ? undefined
-            : p.proofImageUrl,
-      })),
+    const compact = {
+      v: 2,
+      i: bill.id,
+      t: bill.title || '',
+      c: bill.creatorName || '',
+      d: bill.date || '',
+      g: bill.category || '',
+      m: bill.mode === 'equal' ? 'e' : 'i',
+      r: bill.extraRule === 'equal' ? 'e' : 'p',
+      tp: bill.taxPercent || 0,
+      ta: bill.taxAmount || 0,
+      sp: bill.servicePercent || 0,
+      sa: bill.serviceAmount || 0,
+      dl: bill.deliveryAmount || 0,
+      ds: bill.discountAmount || 0,
+      k: (bill.paymentChannels || [])
+        .filter((c) => c.enabled)
+        .map((c) => [c.id, c.provider, c.accountNumber, c.accountHolder]),
+      p: (bill.participants || []).map((p) => [
+        p.id,
+        p.name,
+        p.status === 'paid' ? 1 : 0,
+        p.paidVia || '',
+        p.paidAt || '',
+        p.phoneOrHandle || '',
+      ]),
+      it: (bill.items || []).map((it) => [
+        it.id,
+        it.name,
+        it.qty,
+        it.unitPrice,
+        it.assignedTo,
+      ]),
     };
-    const json = JSON.stringify(lightBill);
+    const json = JSON.stringify(compact);
     const bytes = new TextEncoder().encode(json);
     let binary = '';
     bytes.forEach((b) => {
@@ -265,7 +280,60 @@ export function decodeBillFromUrlParam(encoded: string): SplitBill | null {
       bytes[i] = binary.charCodeAt(i);
     }
     const json = new TextDecoder().decode(bytes);
-    return JSON.parse(json) as SplitBill;
+    const parsed = JSON.parse(json);
+
+    // If version 2 compact schema
+    if (parsed && parsed.v === 2) {
+      return {
+        id: parsed.i || `sb-${Date.now().toString(36)}`,
+        title: parsed.t || '',
+        creatorName: parsed.c || '',
+        date: parsed.d || new Date().toISOString().slice(0, 10),
+        category: parsed.g || 'Makan & Minum',
+        createdAt: new Date().toISOString(),
+        mode: parsed.m === 'e' ? 'equal' : 'itemized',
+        extraRule: parsed.r === 'e' ? 'equal' : 'proportional',
+        taxPercent: Number(parsed.tp) || 0,
+        taxAmount: Number(parsed.ta) || 0,
+        useTaxPercent: Boolean(parsed.tp),
+        servicePercent: Number(parsed.sp) || 0,
+        serviceAmount: Number(parsed.sa) || 0,
+        useServicePercent: Boolean(parsed.sp),
+        deliveryAmount: Number(parsed.dl) || 0,
+        discountAmount: Number(parsed.ds) || 0,
+        notes: '',
+        paymentChannels: Array.isArray(parsed.k)
+          ? parsed.k.map((c: any) => ({
+              id: c[0] || `ch-${Math.random().toString(36).slice(2, 6)}`,
+              provider: c[1] || 'Transfer',
+              accountNumber: c[2] || '',
+              accountHolder: c[3] || '',
+              enabled: true,
+            }))
+          : [],
+        participants: Array.isArray(parsed.p)
+          ? parsed.p.map((p: any) => ({
+              id: p[0],
+              name: p[1] || 'Teman',
+              status: p[2] === 1 ? 'paid' : 'unpaid',
+              paidVia: p[3] || undefined,
+              paidAt: p[4] || undefined,
+              phoneOrHandle: p[5] || undefined,
+            }))
+          : [],
+        items: Array.isArray(parsed.it)
+          ? parsed.it.map((it: any) => ({
+              id: it[0],
+              name: it[1] || 'Menu',
+              qty: Number(it[2]) || 1,
+              unitPrice: Number(it[3]) || 0,
+              assignedTo: Array.isArray(it[4]) ? it[4] : [],
+            }))
+          : [],
+      };
+    }
+
+    return parsed as SplitBill;
   } catch {
     return null;
   }
@@ -273,17 +341,35 @@ export function decodeBillFromUrlParam(encoded: string): SplitBill | null {
 
 export function buildShareablePaymentLink(
   bill: SplitBill,
-  participantId?: string
+  participantId?: string,
+  includeDataFallback: boolean = false
 ): string {
   const baseUrl = window.location.origin + window.location.pathname;
-  const encoded = encodeBillToUrlParam(bill);
   const params = new URLSearchParams();
   params.set('pay', bill.id);
   if (participantId) {
     params.set('p', participantId);
   }
-  if (encoded) {
-    params.set('d', encoded);
+  if (includeDataFallback) {
+    const encoded = encodeBillToUrlParam(bill);
+    if (encoded) {
+      params.set('d', encoded);
+    }
   }
   return `${baseUrl}?${params.toString()}`;
+}
+
+export async function fetchShortenedUrl(longUrl: string): Promise<string> {
+  try {
+    const res = await fetch(`/api/shorten?url=${encodeURIComponent(longUrl)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.shortUrl) {
+        return data.shortUrl;
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return longUrl;
 }
