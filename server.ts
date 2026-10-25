@@ -5,6 +5,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
 import dotenv from "dotenv";
 
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 dotenv.config();
 
 const app = express();

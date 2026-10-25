@@ -1,0 +1,25 @@
+{
+  "sb-mvnqjub2": {
+    "id": "sb-mvnqjub2",
+    "title": "",
+    "category": "Makan & Minum",
+    "date": "2026-10-25",
+    "createdAt": "2026-10-25T11:19:40.334Z",
+    "mode": "itemized",
+    "extraRule": "proportional",
+    "taxPercent": 0,
+    "taxAmount": 0,
+    "useTaxPercent": true,
+    "servicePercent": 0,
+    "serviceAmount": 0,
+    "useServicePercent": true,
+    "deliveryAmount": 0,
+    "discountAmount": 0,
+    "notes": "",
+    "creatorName": "",
+    "paymentChannels": [],
+    "participants": [],
+    "items": [],
+    "updatedAt": "2026-10-25T11:19:40.848Z"
+  }
+}
