@@ -208,7 +208,19 @@ apiRouter.post("/scan-receipt", async (req, res) => {
       },
     });
 
-    const parts: any[] = [];
+    const promptText =
+      `Ekstrak struk berikut (terdiri dari ${imageList.length > 0 ? imageList.length + ' foto struk' : 'teks struk'}) menjadi satu objek JSON murni dengan format persis:\n` +
+      `{"title":"Nama Toko/Resto","category":"Makan & Minum","items":[{"name":"Nama Menu","qty":1,"unitPrice":25000}],"taxAmount":0,"serviceAmount":0,"deliveryAmount":0,"discountAmount":0}\n` +
+      `Aturan:\n` +
+      `- Jika ada beberapa foto struk (misalnya struk panjang bersambung, halaman 1 & 2, atau beberapa pesanan toko berbeda), gabungkan semua menu ke dalam array items menjadi satu kesatuan utuh.\n` +
+      `- Semua nominal dalam angka bulat Rupiah tanpa tanda titik atau koma (contoh: 45.000 -> 45000, 11.500 -> 11500).\n` +
+      `- unitPrice adalah harga satuan per 1 item (jika tertulis 2x 25.000 = 50.000, maka qty: 2, unitPrice: 25000).\n` +
+      `- Jangan masukkan baris subtotal, total, bayar, atau kembalian ke dalam array items.\n` +
+      `- Jumlahkan taxAmount (pajak), serviceAmount (layanan), deliveryAmount (ongkir), dan discountAmount (diskon) dari seluruh struk yang disertakan.\n` +
+      (rawText ? `\nTeks tambahan:\n${rawText}` : "");
+
+    // Gemini Multimodal best practice: prompt text first, then images
+    const parts: any[] = [{ text: promptText }];
     for (const img of imageList) {
       parts.push({
         inlineData: {
@@ -218,31 +230,18 @@ apiRouter.post("/scan-receipt", async (req, res) => {
       });
     }
 
-    parts.push({
-      text:
-        `Ekstrak struk berikut (terdiri dari ${imageList.length > 0 ? imageList.length + ' foto struk' : 'teks struk'}) menjadi satu objek JSON murni dengan format persis:\n` +
-        `{"title":"Nama Toko/Resto","category":"Makan & Minum","items":[{"name":"Nama Menu","qty":1,"unitPrice":25000}],"taxAmount":0,"serviceAmount":0,"deliveryAmount":0,"discountAmount":0}\n` +
-        `Aturan:\n` +
-        `- Jika ada beberapa foto struk (misalnya struk panjang bersambung, halaman 1 & 2, atau beberapa pesanan), gabungkan semua menu ke dalam array items menjadi satu kesatuan utuh.\n` +
-        `- Semua nominal dalam angka bulat Rupiah (contoh: 45.000 -> 45000).\n` +
-        `- unitPrice adalah harga satuan per 1 item (jika tertulis 2x 25.000 = 50.000, maka qty: 2, unitPrice: 25000).\n` +
-        `- Jangan masukkan subtotal/total akhir ke dalam array items.\n` +
-        `- Jumlahkan taxAmount, serviceAmount, deliveryAmount, dan discountAmount dari seluruh struk yang disertakan.\n` +
-        (rawText ? `\nTeks tambahan:\n${rawText}` : ""),
-    });
-
     let rawJson = "";
     const candidateModels = [
       "gemini-3.5-flash-lite",
       "gemini-flash-lite-latest",
-      "gemini-3.1-flash-lite",
+      "gemini-3.8-flash",
     ];
 
     for (const modelName of candidateModels) {
       try {
         const response = await ai.models.generateContent({
           model: modelName,
-          contents: { parts },
+          contents: parts,
           config: {
             temperature: 0.1,
             responseMimeType: "application/json",
@@ -262,22 +261,32 @@ apiRouter.post("/scan-receipt", async (req, res) => {
     }
 
     const parsed = JSON.parse(rawJson);
+    const rawItems =
+      parsed.items || parsed.menu || parsed.itemList || parsed.daftarMenu || [];
+
+    const normalizedItems = Array.isArray(rawItems)
+      ? rawItems
+          .map((it: any) => ({
+            name: String(it.name || it.item || it.title || it.menu || "Menu").trim(),
+            qty: Math.max(1, Number(it.qty || it.quantity || it.jumlah || it.count || 1) || 1),
+            unitPrice: Math.max(
+              0,
+              Math.round(Number(it.unitPrice || it.price || it.harga || it.amount || 0) || 0)
+            ),
+          }))
+          .filter((it: any) => it.name && it.unitPrice > 0)
+      : [];
+
+    if (normalizedItems.length === 0) {
+      throw new Error(
+        "AI belum berhasil mendeteksi daftar item dari foto. Pastikan teks pada foto struk terlihat jelas dan coba scan ulang."
+      );
+    }
 
     const normalized = {
       title: String(parsed.title || "Struk Tagihan"),
       category: String(parsed.category || "Makan & Minum"),
-      items: Array.isArray(parsed.items)
-        ? parsed.items
-            .map((it: any) => ({
-              name: String(it.name || it.item || "Menu").trim(),
-              qty: Math.max(1, Number(it.qty || it.quantity || 1) || 1),
-              unitPrice: Math.max(
-                0,
-                Math.round(Number(it.unitPrice || it.price || 0) || 0)
-              ),
-            }))
-            .filter((it: any) => it.name && it.unitPrice > 0)
-        : [],
+      items: normalizedItems,
       taxAmount: Math.max(0, Math.round(Number(parsed.taxAmount || 0) || 0)),
       serviceAmount: Math.max(
         0,
