@@ -67,7 +67,7 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       try {
-        const compressed = await compressImageToDataUrl(file, 950, 0.82);
+        const compressed = await compressImageToDataUrl(file, 800, 0.72);
         const base64 = compressed.split(',')[1] || '';
         newItems.push({
           id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
@@ -154,7 +154,7 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
     } catch (err: any) {
       setError(
         err?.message ||
-          'Terjadi kendala saat memindai struk. Silakan coba lagi atau periksa koneksi.'
+        'Terjadi kendala saat memindai struk. Silakan coba lagi atau periksa koneksi.'
       );
     } finally {
       setIsScanning(false);
@@ -172,16 +172,13 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto">
       <div className="bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-xl max-h-[92vh] overflow-y-auto">
         <div className="w-10 h-1.5 bg-slate-200 rounded-full mx-auto mb-3 sm:hidden" />
-        
+
         <div className="flex items-center justify-between pb-3.5 border-b border-slate-200">
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base sm:text-lg font-extrabold text-slate-900 font-display">
-                Scan Struk Otomatis (Multi-Foto)
+                Scan Struk Otomatis
               </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#00880D]/10 text-[#00880D]">
-                AI Gemini
-              </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
               Bisa unggah lebih dari satu foto untuk struk panjang bersambung atau beberapa struk sekaligus
@@ -205,11 +202,10 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
               setActiveTab('image');
               setError(null);
             }}
-            className={`min-h-[40px] flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap ${
-              activeTab === 'image'
+            className={`min-h-[40px] flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap ${activeTab === 'image'
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             <Upload className="w-4 h-4" />
             Foto Struk ({images.length})
@@ -220,11 +216,10 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
               setActiveTab('text');
               setError(null);
             }}
-            className={`min-h-[40px] flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap ${
-              activeTab === 'text'
+            className={`min-h-[40px] flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap ${activeTab === 'text'
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             <FileText className="w-4 h-4" />
             Tempel Teks

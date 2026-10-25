@@ -231,17 +231,36 @@ apiRouter.post("/scan-receipt", async (req, res) => {
         (rawText ? `\nTeks tambahan:\n${rawText}` : ""),
     });
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite",
-      contents: { parts },
-      config: {
-        thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
-        temperature: 0.1,
-        responseMimeType: "application/json",
-      },
-    });
+    let rawJson = "";
+    const candidateModels = [
+      "gemini-3.5-flash-lite",
+      "gemini-flash-lite-latest",
+      "gemini-3.1-flash-lite",
+    ];
 
-    const rawJson = (response.text || "{}").trim();
+    for (const modelName of candidateModels) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: { parts },
+          config: {
+            temperature: 0.1,
+            responseMimeType: "application/json",
+          },
+        });
+        if (response.text) {
+          rawJson = response.text.trim();
+          break;
+        }
+      } catch (modelErr: any) {
+        console.warn(`Model ${modelName} encountered issue: ${modelErr?.message}, trying next model...`);
+      }
+    }
+
+    if (!rawJson) {
+      throw new Error("Layanan AI Gemini sedang mengalami lonjakan trafik. Silakan coba lagi dalam beberapa detik.");
+    }
+
     const parsed = JSON.parse(rawJson);
 
     const normalized = {
