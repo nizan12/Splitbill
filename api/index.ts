@@ -318,7 +318,38 @@ apiRouter.post("/bills", (req, res) => {
     }
 
     const bills = readBills();
+    const existingBill = bills[bill.id];
+
+    if (existingBill && Array.isArray(existingBill.participants)) {
+      bill.participants = (bill.participants || []).map((incomingP: any) => {
+        const existingP = existingBill.participants.find((p: any) => p.id === incomingP.id);
+        if (existingP && existingP.status === "paid" && incomingP.status !== "paid") {
+          return {
+            ...incomingP,
+            status: existingP.status,
+            paidAt: existingP.paidAt,
+            paidVia: existingP.paidVia,
+            paidNote: existingP.paidNote,
+            proofImageUrl: existingP.proofImageUrl,
+            proofRefNumber: existingP.proofRefNumber,
+            userId: incomingP.userId || existingP.userId,
+            email: incomingP.email || existingP.email,
+            photoURL: incomingP.photoURL || existingP.photoURL,
+          };
+        }
+        if (existingP && existingP.proofImageUrl && !incomingP.proofImageUrl) {
+          return {
+            ...incomingP,
+            proofImageUrl: existingP.proofImageUrl,
+            proofRefNumber: existingP.proofRefNumber || incomingP.proofRefNumber,
+          };
+        }
+        return incomingP;
+      });
+    }
+
     bills[bill.id] = {
+      ...existingBill,
       ...bill,
       updatedAt: new Date().toISOString(),
     };

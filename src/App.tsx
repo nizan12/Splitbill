@@ -595,6 +595,97 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [activeBill, canEditActiveBill, currentUser, storageKey, summary.grandTotal, summary.paidCount]);
 
+  // Real-time synchronization: Poll server every 2.5s for participant payment & proof updates
+  useEffect(() => {
+    if (!activeBill.id || !isBillMeaningful(activeBill)) return;
+
+    let isMounted = true;
+
+    const syncLatestBillFromServer = async () => {
+      try {
+        const res = await fetch(`/api/bills/${activeBill.id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const serverBill: SplitBill | undefined = data?.bill;
+        if (!serverBill || !isMounted) return;
+
+        setActiveBill((current) => {
+          if (current.id !== serverBill.id) return current;
+
+          let hasChanges = false;
+          const mergedParticipants = current.participants.map((p) => {
+            const serverP = (serverBill.participants || []).find((sp) => sp.id === p.id);
+            if (!serverP) return p;
+
+            if (
+              serverP.status !== p.status ||
+              serverP.paidAt !== p.paidAt ||
+              serverP.proofImageUrl !== p.proofImageUrl ||
+              serverP.proofRefNumber !== p.proofRefNumber ||
+              serverP.paidVia !== p.paidVia ||
+              serverP.paidNote !== p.paidNote ||
+              serverP.userId !== p.userId ||
+              serverP.photoURL !== p.photoURL
+            ) {
+              hasChanges = true;
+              return {
+                ...p,
+                status: serverP.status,
+                paidAt: serverP.paidAt,
+                paidVia: serverP.paidVia || p.paidVia,
+                paidNote: serverP.paidNote !== undefined ? serverP.paidNote : p.paidNote,
+                proofImageUrl: serverP.proofImageUrl,
+                proofRefNumber: serverP.proofRefNumber,
+                userId: serverP.userId || p.userId,
+                email: serverP.email || p.email,
+                photoURL: serverP.photoURL || p.photoURL,
+              };
+            }
+            return p;
+          });
+
+          // In portal mode (shared view), also accept any menu/bill updates made by creator
+          if (!canEditActiveBill) {
+            const serverUpdated = new Date(serverBill.updatedAt || 0).getTime();
+            const currentUpdated = new Date(current.updatedAt || 0).getTime();
+            if (serverUpdated > currentUpdated || hasChanges) {
+              return {
+                ...serverBill,
+                participants: mergedParticipants,
+              };
+            }
+          }
+
+          if (hasChanges) {
+            return {
+              ...current,
+              participants: mergedParticipants,
+            };
+          }
+
+          return current;
+        });
+      } catch {
+        // silent on network error
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncLatestBillFromServer();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    const interval = setInterval(syncLatestBillFromServer, 2500);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [activeBill.id, canEditActiveBill]);
+
   const handleCopyText = async (text: string, id: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -920,54 +1011,60 @@ export default function App() {
     proofImageUrl?: string,
     proofRefNumber?: string
   ) => {
-    setActiveBill((prev) => ({
-      ...prev,
-      participants: prev.participants.map((p) =>
-        p.id === participantId
-          ? {
-              ...p,
-              status,
-              paidAt: status === 'paid' ? new Date().toISOString() : undefined,
-              paidVia: paidVia || p.paidVia || 'Transfer',
-              paidNote: paidNote !== undefined ? paidNote : p.paidNote,
-              proofImageUrl:
-                status === 'unpaid'
-                  ? undefined
-                  : proofImageUrl !== undefined
-                  ? proofImageUrl
-                  : p.proofImageUrl,
-              proofRefNumber:
-                status === 'unpaid'
-                  ? undefined
-                  : proofRefNumber !== undefined
-                  ? proofRefNumber
-                  : p.proofRefNumber,
-            }
-          : p
-      ),
-    }));
+    setActiveBill((prev) => {
+      const updatedBill: SplitBill = {
+        ...prev,
+        participants: prev.participants.map((p) =>
+          p.id === participantId
+            ? {
+                ...p,
+                status,
+                paidAt: status === 'paid' ? new Date().toISOString() : undefined,
+                paidVia: paidVia || p.paidVia || 'Transfer',
+                paidNote: paidNote !== undefined ? paidNote : p.paidNote,
+                proofImageUrl:
+                  status === 'unpaid'
+                    ? undefined
+                    : proofImageUrl !== undefined
+                    ? proofImageUrl
+                    : p.proofImageUrl,
+                proofRefNumber:
+                  status === 'unpaid'
+                    ? undefined
+                    : proofRefNumber !== undefined
+                    ? proofRefNumber
+                    : p.proofRefNumber,
+              }
+            : p
+        ),
+      };
 
-    fetch(`/api/bills/${activeBill.id}/pay`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        participantId,
-        status,
-        paidVia,
-        paidNote,
-        proofImageUrl,
-        proofRefNumber,
-        userId:
-          viewMode === 'portal' && currentUser ? currentUser.uid : undefined,
-        email:
-          viewMode === 'portal' && currentUser ? currentUser.email : undefined,
-        photoURL:
-          viewMode === 'portal' && currentUser
-            ? currentUser.photoURL
-            : undefined,
-        billSnapshot: activeBill,
-      }),
-    }).catch(() => {});
+      fetch(`/api/bills/${prev.id}/pay`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          participantId,
+          status,
+          paidVia,
+          paidNote,
+          proofImageUrl,
+          proofRefNumber,
+          userId:
+            viewMode === 'portal' && currentUser ? currentUser.uid : undefined,
+          email:
+            viewMode === 'portal' && currentUser ? currentUser.email : undefined,
+          photoURL:
+            viewMode === 'portal' && currentUser
+              ? currentUser.photoURL
+              : undefined,
+          billSnapshot: updatedBill,
+        }),
+      }).catch((err) => {
+        console.warn('Gagal sinkron status bayar ke server:', err);
+      });
+
+      return updatedBill;
+    });
   };
 
   // Add Menu Item

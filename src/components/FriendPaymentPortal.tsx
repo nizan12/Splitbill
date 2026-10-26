@@ -21,7 +21,11 @@ import {
   BillCalculationSummary,
   PaymentStatus,
 } from '../types';
-import { formatRupiah, buildShareablePaymentLink } from '../utils/splitCalculator';
+import {
+  formatRupiah,
+  buildShareablePaymentLink,
+  compressImageToDataUrl,
+} from '../utils/splitCalculator';
 import { DynamicQRISCard } from './DynamicQRISCard';
 import type { User } from '../firebase';
 
@@ -169,18 +173,49 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
     ? activeBreakdown.finalTotal + activeBreakdown.uniqueCode
     : activeBreakdown.finalTotal;
 
-  const handleProofFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [isProcessingProof, setIsProcessingProof] = useState<boolean>(false);
+
+  // Keep local proof inputs in sync whenever server or parent updates active participant
+  useEffect(() => {
+    if (activeBreakdown?.participant) {
+      setProofPreview(activeBreakdown.participant.proofImageUrl);
+      setProofRefNumber(activeBreakdown.participant.proofRefNumber || '');
+      setPaymentNote(activeBreakdown.participant.paidNote || '');
+    }
+  }, [
+    activeBreakdown?.participant.id,
+    activeBreakdown?.participant.status,
+    activeBreakdown?.participant.proofImageUrl,
+    activeBreakdown?.participant.proofRefNumber,
+    activeBreakdown?.participant.paidNote,
+  ]);
+
+  const handleProofFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      setProofPreview(result);
-      if (!proofRefNumber) {
-        setProofRefNumber('SB-' + Date.now().toString().slice(-8));
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsProcessingProof(true);
+      // Compress image to ~50KB so it never fails server limits or localStorage quotas
+      const compressedDataUrl = await compressImageToDataUrl(file, 800, 0.82);
+      const refNo = proofRefNumber.trim() || 'SB-' + Date.now().toString().slice(-8);
+      setProofPreview(compressedDataUrl);
+      setProofRefNumber(refNo);
+
+      // Automatically mark as paid and submit proof to server immediately!
+      onUpdatePaymentStatus(
+        activeBreakdown.participant.id,
+        'paid',
+        selectedVia,
+        paymentNote,
+        compressedDataUrl,
+        refNo
+      );
+    } catch (err) {
+      console.warn('Gagal memproses gambar bukti:', err);
+    } finally {
+      setIsProcessingProof(false);
+      if (e.target) e.target.value = '';
+    }
   };
 
   const progressPercent =
@@ -1035,15 +1070,20 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                   <button
                     type="button"
                     onClick={() => proofFileRef.current?.click()}
-                    className="min-h-[42px] px-4 py-2 rounded-full border border-slate-300 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                    disabled={isProcessingProof}
+                    className="min-h-[42px] px-4 py-2 rounded-full border border-slate-300 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors whitespace-nowrap disabled:opacity-50"
                   >
                     <Upload className="w-3.5 h-3.5" />
-                    {proofPreview ? 'Ganti Foto' : 'Upload Bukti'}
+                    {isProcessingProof
+                      ? 'Mengunggah...'
+                      : proofPreview
+                      ? 'Ganti Bukti'
+                      : 'Upload Bukti'}
                   </button>
                 </div>
 
                 {proofPreview && (
-                  <div className="mt-2.5 p-2.5 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
+                  <div className="mt-2.5 p-2.5 rounded-2xl border border-[#00880D]/30 bg-[#00880D]/[0.04] flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <img
                         src={proofPreview}
@@ -1052,8 +1092,9 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                         className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
                       />
                       <div className="min-w-0">
-                        <span className="text-xs font-bold text-slate-800 block truncate">
-                          Bukti Transfer Terlampir
+                        <span className="text-xs font-bold text-[#00880D] block truncate flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                          Bukti Terunggah (Lunas)
                         </span>
                         <span className="text-[11px] font-mono text-slate-500 block">
                           Ref: {proofRefNumber || '-'}
@@ -1062,7 +1103,15 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                     </div>
                     <button
                       type="button"
-                      onClick={() => setProofPreview(undefined)}
+                      onClick={() => {
+                        setProofPreview(undefined);
+                        onUpdatePaymentStatus(
+                          activeBreakdown.participant.id,
+                          'unpaid',
+                          selectedVia,
+                          paymentNote
+                        );
+                      }}
                       className="text-xs text-slate-400 hover:text-red-600 px-2 py-1"
                     >
                       Hapus
