@@ -1184,7 +1184,7 @@ export default function App() {
           }}
           className="text-base sm:text-lg font-extrabold tracking-tight text-[#00AED6] font-display whitespace-nowrap shrink-0"
         >
-          Split Bill
+          Patungans
         </a>
 
         {/* Zone 2: Desktop Navigation Links */}
