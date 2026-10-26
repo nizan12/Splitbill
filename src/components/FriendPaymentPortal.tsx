@@ -322,9 +322,9 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                   setProofPreview(b.participant.proofImageUrl);
                   setProofRefNumber(b.participant.proofRefNumber || '');
                 }}
-                className={`w-[215px] sm:w-auto min-w-[215px] sm:min-w-0 min-h-[58px] p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-2.5 shrink-0 ${
+                className={`w-[245px] sm:w-auto min-h-[58px] p-3 rounded-2xl border-2 text-left transition-all flex items-center justify-between gap-2.5 shrink-0 ${
                   isSelected
-                    ? 'border-[#00AED6] bg-[#00AED6]/[0.08] ring-2 ring-[#00AED6]/25'
+                    ? 'border-[#00AED6] bg-[#00AED6]/[0.08]'
                     : 'border-slate-200 hover:border-slate-300 bg-white'
                 }`}
               >

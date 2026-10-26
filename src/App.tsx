@@ -1521,9 +1521,9 @@ export default function App() {
                   return (
                     <div
                       key={billItem.id}
-                      className={`bg-white rounded-3xl border p-5 flex flex-col justify-between transition-all shadow-2xs ${
+                      className={`bg-white rounded-3xl border-2 p-5 flex flex-col justify-between transition-all shadow-2xs ${
                         isCurrent
-                          ? 'border-[#00AED6] ring-2 ring-[#00AED6]/20'
+                          ? 'border-[#00AED6] bg-[#00AED6]/[0.02]'
                           : 'border-slate-200 hover:border-slate-300'
                       }`}
                     >
