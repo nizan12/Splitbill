@@ -1267,7 +1267,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F1F5F9] text-[#0F172A] pb-24 lg:pb-10">
+    <div className="min-h-screen flex flex-col bg-[#F1F5F9] text-[#0F172A] pb-24 lg:pb-10 overflow-x-hidden w-full max-w-full">
       {/* Compact Sticky Top App Bar (3-Zone Contract, < 56px height on mobile) */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-8 h-14 flex items-center justify-between gap-4">
         {/* Zone 1: Single text element wordmark */}
@@ -1365,7 +1365,7 @@ export default function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1">
+      <main className="flex-1 w-full max-w-full overflow-x-hidden">
         {viewMode === 'portal' || !canEditActiveBill && viewMode === 'editor' ? (
           <FriendPaymentPortal
             bill={activeBill}
@@ -3087,7 +3087,7 @@ export default function App() {
                             className="p-3.5 sm:p-4 rounded-2xl border border-slate-200 hover:border-[#00AED6] transition-colors bg-white"
                           >
                             <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                 <div
                                   className={`w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-xs shrink-0 ${getAvatarColor(
                                     idx
@@ -3095,7 +3095,7 @@ export default function App() {
                                 >
                                   {getInitials(b.participant.name)}
                                 </div>
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                   <div className="text-sm font-extrabold text-slate-900 truncate">
                                     {b.participant.name}
                                   </div>

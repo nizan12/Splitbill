@@ -198,13 +198,16 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                   key={b.participant.id}
                   type="button"
                   onClick={() => setSelectedParticipantId(b.participant.id)}
-                  className={`min-h-[36px] px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap ${
+                  className={`min-h-[36px] px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors max-w-full ${
                     selectedParticipantId === b.participant.id
                       ? 'bg-[#00880D] text-white'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
+                  title={`Khusus ${b.participant.name} (${formatRupiah(b.finalTotal)})`}
                 >
-                  Khusus {b.participant.name} ({formatRupiah(b.finalTotal)})
+                  <span className="truncate block">
+                    Khusus {b.participant.name} ({formatRupiah(b.finalTotal)})
+                  </span>
                 </button>
               ))}
             </div>
