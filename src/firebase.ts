@@ -8,6 +8,7 @@ import {
   signOut,
   onAuthStateChanged,
   User,
+  updateProfile,
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -152,6 +153,16 @@ export async function syncUserProfileToFirestore(user: User) {
     );
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function updateUserProfileAvatar(photoURL: string): Promise<void> {
+  if (auth.currentUser) {
+    try {
+      await updateProfile(auth.currentUser, { photoURL });
+    } catch (err) {
+      console.warn('Failed to update auth profile avatar:', err);
+    }
   }
 }
 

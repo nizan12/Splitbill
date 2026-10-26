@@ -22,6 +22,8 @@ import {
   Mail,
   Search,
   Car,
+  Camera,
+  Smile,
 } from 'lucide-react';
 import {
   SplitBill,
@@ -44,12 +46,15 @@ import { decodeQRFromImage, parseQRIS } from './utils/qris';
 import { ReceiptScannerModal } from './components/ReceiptScannerModal';
 import { ShareLinkModal } from './components/ShareLinkModal';
 import { FriendPaymentPortal } from './components/FriendPaymentPortal';
+import { AvatarPickerModal } from './components/AvatarPickerModal';
+import { getAvatarUrl } from './data/avatars';
 import {
   auth,
   onAuthStateChanged,
   signInWithGoogle,
   logoutGoogle,
   syncUserProfileToFirestore,
+  updateUserProfileAvatar,
   syncBillMetadataToFirestore,
   deleteBillFromFirestore,
   User,
@@ -301,6 +306,122 @@ export default function App() {
     null
   );
 
+  // Avatar Modal & Custom Avatar state
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const [avatarModalTarget, setAvatarModalTarget] = useState<
+    | { type: 'user' }
+    | { type: 'participant'; participantId: string; participantName: string; currentPhotoURL?: string }
+    | null
+  >(null);
+  const [guestAvatar, setGuestAvatar] = useState<string>(() => {
+    try {
+      return localStorage.getItem('splitbill_guest_avatar') || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const userActivePhoto = currentUser?.photoURL || (!currentUser ? guestAvatar : '');
+  const originalGooglePhotoUrl = currentUser?.providerData?.[0]?.photoURL || undefined;
+
+  const openUserProfileAvatarModal = () => {
+    setAvatarModalTarget({ type: 'user' });
+    setIsAvatarModalOpen(true);
+  };
+
+  const openParticipantAvatarModal = (p: Participant) => {
+    setAvatarModalTarget({
+      type: 'participant',
+      participantId: p.id,
+      participantName: p.name,
+      currentPhotoURL: p.photoURL,
+    });
+    setIsAvatarModalOpen(true);
+  };
+
+  const handleSelectAvatar = async (avatarUrl: string) => {
+    if (avatarModalTarget?.type === 'participant') {
+      const pId = avatarModalTarget.participantId;
+      setActiveBill((prev) => ({
+        ...prev,
+        participants: prev.participants.map((p) =>
+          p.id === pId ? { ...p, photoURL: avatarUrl || undefined } : p
+        ),
+      }));
+      setIsAvatarModalOpen(false);
+      return;
+    }
+
+    // Changing profile avatar
+    if (currentUser) {
+      const originalGooglePhoto = currentUser.providerData?.[0]?.photoURL || '';
+      const isRestoringOriginal = avatarUrl === originalGooglePhoto;
+
+      try {
+        if (isRestoringOriginal) {
+          localStorage.removeItem(`splitbill_avatar_${currentUser.uid}`);
+        } else {
+          localStorage.setItem(`splitbill_avatar_${currentUser.uid}`, avatarUrl);
+        }
+      } catch {}
+
+      await updateUserProfileAvatar(avatarUrl);
+
+      const updatedUser = {
+        ...currentUser,
+        photoURL: avatarUrl,
+      } as User;
+      setCurrentUser(updatedUser);
+
+      syncUserProfileToFirestore(updatedUser).catch(() => {});
+      fetch('/api/users/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: currentUser.uid,
+          displayName: currentUser.displayName || '',
+          email: currentUser.email || '',
+          photoURL: avatarUrl,
+        }),
+      })
+        .then(() => refreshRegisteredUsers())
+        .catch(() => {});
+
+      // Sync to participants linked to this user in current bill
+      setActiveBill((prev) => ({
+        ...prev,
+        participants: prev.participants.map((p) => {
+          if (
+            p.userId === currentUser.uid ||
+            (p.email && currentUser.email && p.email.toLowerCase() === currentUser.email.toLowerCase())
+          ) {
+            return { ...p, photoURL: avatarUrl || undefined };
+          }
+          return p;
+        }),
+      }));
+    } else {
+      // Guest mode
+      try {
+        localStorage.setItem('splitbill_guest_avatar', avatarUrl);
+      } catch {}
+      setGuestAvatar(avatarUrl);
+
+      // If activeBill has a participant named "Saya", sync its avatar
+      setActiveBill((prev) => ({
+        ...prev,
+        participants: prev.participants.map((p) => {
+          if (p.name.toLowerCase() === 'saya' && !p.userId) {
+            return { ...p, photoURL: avatarUrl || undefined };
+          }
+          return p;
+        }),
+      }));
+    }
+
+    setIsAvatarModalOpen(false);
+  };
+
   // Fetch registered users directory so autocomplete works when adding friends
   const refreshRegisteredUsers = () => {
     fetch('/api/users')
@@ -351,6 +472,15 @@ export default function App() {
   // Listen to Firebase Google Auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        try {
+          const savedCustomAvatar = localStorage.getItem(`splitbill_avatar_${user.uid}`);
+          if (savedCustomAvatar && savedCustomAvatar !== user.photoURL) {
+            updateUserProfileAvatar(savedCustomAvatar).catch(() => {});
+            user = { ...user, photoURL: savedCustomAvatar } as User;
+          }
+        } catch {}
+      }
       setCurrentUser(user);
       setAuthLoading(false);
 
@@ -1491,25 +1621,48 @@ export default function App() {
             {/* Compact Google Auth Card in Saved View for Mobile */}
             <div className="mb-5 bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
               <div className="flex items-center gap-3 min-w-0">
-                {currentUser?.photoURL ? (
-                  <img
-                    src={currentUser.photoURL}
-                    alt={currentUser.displayName || 'Profil Google'}
-                    referrerPolicy="no-referrer"
-                    className="w-10 h-10 rounded-full object-cover border-2 border-[#00AED6] shrink-0"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-[#00AED6]/10 text-[#00AED6] flex items-center justify-center font-extrabold text-xs shrink-0">
-                    {currentUser?.displayName
-                      ? getInitials(currentUser.displayName)
-                      : 'G'}
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={openUserProfileAvatarModal}
+                  className="relative group shrink-0 focus:outline-none focus:ring-2 focus:ring-[#00AED6] rounded-full"
+                  title="Ganti Avatar Profil"
+                >
+                  {userActivePhoto ? (
+                    <img
+                      src={userActivePhoto}
+                      alt={currentUser?.displayName || 'Avatar Profil'}
+                      referrerPolicy="no-referrer"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-[#00AED6] shadow-2xs group-hover:opacity-90 transition-opacity"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-[#00AED6]/10 text-[#00AED6] flex items-center justify-center font-extrabold text-xs group-hover:bg-[#00AED6]/20 transition-colors">
+                      {currentUser?.displayName
+                        ? getInitials(currentUser.displayName)
+                        : 'G'}
+                    </div>
+                  )}
+                  <span
+                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-xs text-[9px] group-hover:bg-[#00AED6] transition-colors"
+                    title="Ganti Avatar"
+                  >
+                    <Camera className="w-2.5 h-2.5" />
+                  </span>
+                </button>
                 <div className="min-w-0">
-                  <div className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                    {currentUser
-                      ? currentUser.displayName || currentUser.email
-                      : 'Mode Tamu (Tersimpan di Perangkat Ini)'}
+                  <div className="text-xs sm:text-sm font-bold text-slate-900 truncate flex items-center gap-2">
+                    <span>
+                      {currentUser
+                        ? currentUser.displayName || currentUser.email
+                        : 'Mode Tamu (Tersimpan di Perangkat Ini)'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={openUserProfileAvatarModal}
+                      className="text-[10px] text-[#00AED6] hover:underline font-bold inline-flex items-center gap-0.5"
+                    >
+                      <Smile className="w-3 h-3" />
+                      <span>Ganti Avatar</span>
+                    </button>
                   </div>
                   <div className="text-[11px] text-slate-500 truncate">
                     {currentUser
@@ -1741,20 +1894,33 @@ export default function App() {
             {/* Compact Mobile-First Account & Quick Reset Bar */}
             <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:px-5 flex items-center justify-between gap-2.5 shadow-2xs">
               <div className="flex items-center gap-2.5 min-w-0">
-                {currentUser?.photoURL ? (
-                  <img
-                    src={currentUser.photoURL}
-                    alt={currentUser.displayName || 'Profil Google'}
-                    referrerPolicy="no-referrer"
-                    className="w-9 h-9 rounded-full object-cover border-2 border-[#00AED6] shrink-0"
-                  />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-[#00AED6]/10 text-[#00AED6] flex items-center justify-center font-extrabold text-xs shrink-0">
-                    {currentUser?.displayName
-                      ? getInitials(currentUser.displayName)
-                      : 'G'}
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={openUserProfileAvatarModal}
+                  className="relative group shrink-0 focus:outline-none focus:ring-2 focus:ring-[#00AED6] rounded-full"
+                  title="Ganti Avatar Profil"
+                >
+                  {userActivePhoto ? (
+                    <img
+                      src={userActivePhoto}
+                      alt={currentUser?.displayName || 'Avatar Profil'}
+                      referrerPolicy="no-referrer"
+                      className="w-9 h-9 rounded-full object-cover border-2 border-[#00AED6] shadow-2xs group-hover:opacity-90 transition-opacity"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-[#00AED6]/10 text-[#00AED6] flex items-center justify-center font-extrabold text-xs group-hover:bg-[#00AED6]/20 transition-colors">
+                      {currentUser?.displayName
+                        ? getInitials(currentUser.displayName)
+                        : 'G'}
+                    </div>
+                  )}
+                  <span
+                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-xs text-[9px] group-hover:bg-[#00AED6] transition-colors"
+                    title="Ganti Avatar"
+                  >
+                    <Camera className="w-2.5 h-2.5" />
+                  </span>
+                </button>
 
                 <div className="min-w-0">
                   {currentUser ? (
@@ -1764,6 +1930,15 @@ export default function App() {
                           {currentUser.displayName || 'Pengguna Google'}
                         </span>
                         <ShieldCheck className="w-3.5 h-3.5 text-[#00880D] shrink-0" />
+                        <button
+                          type="button"
+                          onClick={openUserProfileAvatarModal}
+                          className="text-[10px] text-[#00AED6] hover:underline font-bold inline-flex items-center gap-0.5 ml-0.5"
+                          title="Ubah avatar profil"
+                        >
+                          <Smile className="w-2.5 h-2.5" />
+                          <span>Ganti Avatar</span>
+                        </button>
                       </div>
                       <p className="text-[11px] text-slate-500 truncate">
                         {currentUser.email}
@@ -1771,8 +1946,19 @@ export default function App() {
                     </>
                   ) : (
                     <>
-                      <div className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                        Simpan Tagihan & QRIS di Akun Google
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                          Simpan Tagihan & QRIS di Akun Google
+                        </span>
+                        <button
+                          type="button"
+                          onClick={openUserProfileAvatarModal}
+                          className="text-[10px] text-[#00AED6] hover:underline font-bold inline-flex items-center gap-0.5"
+                          title="Pilih avatar karakter"
+                        >
+                          <Smile className="w-2.5 h-2.5" />
+                          <span>Pilih Avatar</span>
+                        </button>
                       </div>
                       <p className="text-[11px] text-slate-500 truncate">
                         Login agar struk & QRIS tersimpan otomatis
@@ -2225,23 +2411,38 @@ export default function App() {
                               key={p.id}
                               className="flex flex-col items-center shrink-0 relative"
                             >
-                              <div className="relative">
-                                {p.photoURL ? (
-                                  <img
-                                    src={p.photoURL}
-                                    alt={p.name}
-                                    referrerPolicy="no-referrer"
-                                    className="w-11 h-11 rounded-full object-cover border border-slate-200 shadow-2xs"
-                                  />
-                                ) : (
-                                  <div
-                                    className={`w-11 h-11 rounded-full flex items-center justify-center font-extrabold text-xs shadow-2xs ${getAvatarColor(
-                                      idx
-                                    )}`}
-                                  >
-                                    {getInitials(p.name)}
-                                  </div>
-                                )}
+                              <div className="relative group">
+                                <button
+                                  type="button"
+                                  onClick={() => openParticipantAvatarModal(p)}
+                                  className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#00AED6]"
+                                  title={`Ganti avatar untuk ${p.name}`}
+                                >
+                                  {p.photoURL ? (
+                                    <img
+                                      src={p.photoURL}
+                                      alt={p.name}
+                                      referrerPolicy="no-referrer"
+                                      className="w-11 h-11 rounded-full object-cover border border-slate-200 shadow-2xs group-hover:opacity-90 transition-opacity"
+                                    />
+                                  ) : (
+                                    <div
+                                      className={`w-11 h-11 rounded-full flex items-center justify-center font-extrabold text-xs shadow-2xs group-hover:opacity-90 transition-opacity ${getAvatarColor(
+                                        idx
+                                      )}`}
+                                    >
+                                      {getInitials(p.name)}
+                                    </div>
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openParticipantAvatarModal(p)}
+                                  className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-slate-900 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  title="Ganti Avatar"
+                                >
+                                  <Camera className="w-2 h-2" />
+                                </button>
                                 {isPaid && (
                                   <span
                                     className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#00880D] border-2 border-white text-white flex items-center justify-center"
@@ -2253,7 +2454,7 @@ export default function App() {
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveParticipant(p.id)}
-                                  className="-top-1 -right-1 absolute w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs hover:bg-red-600"
+                                  className="-top-1 -right-1 absolute w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs hover:bg-red-600 z-10"
                                   title={`Hapus ${p.name}`}
                                 >
                                   ×
@@ -2279,22 +2480,29 @@ export default function App() {
                               className="p-3 bg-white flex items-center justify-between gap-2"
                             >
                               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                {p.photoURL ? (
-                                  <img
-                                    src={p.photoURL}
-                                    alt={p.name}
-                                    referrerPolicy="no-referrer"
-                                    className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
-                                  />
-                                ) : (
-                                  <div
-                                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${getAvatarColor(
-                                      idx
-                                    )}`}
-                                  >
-                                    {getInitials(p.name)}
-                                  </div>
-                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => openParticipantAvatarModal(p)}
+                                  className="relative group shrink-0 focus:outline-none rounded-full"
+                                  title={`Ganti avatar untuk ${p.name}`}
+                                >
+                                  {p.photoURL ? (
+                                    <img
+                                      src={p.photoURL}
+                                      alt={p.name}
+                                      referrerPolicy="no-referrer"
+                                      className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0 group-hover:opacity-90 transition-opacity"
+                                    />
+                                  ) : (
+                                    <div
+                                      className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 group-hover:opacity-90 transition-opacity ${getAvatarColor(
+                                        idx
+                                      )}`}
+                                    >
+                                      {getInitials(p.name)}
+                                    </div>
+                                  )}
+                                </button>
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="text-xs font-bold text-slate-900 truncate">
@@ -3831,6 +4039,30 @@ export default function App() {
           setPortalParticipantId(participantId);
           setViewMode('portal');
         }}
+      />
+
+      <AvatarPickerModal
+        isOpen={isAvatarModalOpen}
+        onClose={() => setIsAvatarModalOpen(false)}
+        currentAvatarUrl={
+          avatarModalTarget?.type === 'participant'
+            ? avatarModalTarget.currentPhotoURL
+            : userActivePhoto
+        }
+        originalGooglePhotoUrl={
+          avatarModalTarget?.type === 'user' ? originalGooglePhotoUrl : undefined
+        }
+        title={
+          avatarModalTarget?.type === 'participant'
+            ? `Pilih Avatar untuk ${avatarModalTarget.participantName}`
+            : 'Ganti Avatar Profil'
+        }
+        subtitle={
+          avatarModalTarget?.type === 'participant'
+            ? 'Beri karakter unik untuk teman patunganmu'
+            : 'Pilih karakter unik favoritmu untuk profil di Patungans'
+        }
+        onSelectAvatar={handleSelectAvatar}
       />
     </div>
   );

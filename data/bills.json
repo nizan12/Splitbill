@@ -119,13 +119,12 @@
           "p-mvol75wd0ra",
           "p-mvol77hljip"
         ]
-      }
-    ],
-    "travelItems": [
+      },
       {
-        "id": "tr-mvol80fvi49",
+        "id": "it-mvol80fvi49",
         "name": "Gojek Pergi",
-        "amount": 47500,
+        "qty": 1,
+        "unitPrice": 47500,
         "assignedTo": [
           "p-mvol748wj1q",
           "p-mvol75wd0ra",
@@ -136,9 +135,10 @@
         ]
       },
       {
-        "id": "tr-mvol863lt3f",
+        "id": "it-mvol863lt3f",
         "name": "Gojek Balek",
-        "amount": 44000,
+        "qty": 1,
+        "unitPrice": 44000,
         "assignedTo": [
           "p-mvol748wj1q",
           "p-mvol75wd0ra",
@@ -151,6 +151,6 @@
     ],
     "ownerId": "Hp3BqW5uFrclYKXBHcnG860xJkj2",
     "ownerEmail": "nizan1258@gmail.com",
-    "updatedAt": "2026-10-26T15:29:15.830Z"
+    "updatedAt": "2026-10-26T15:47:37.035Z"
   }
 }
