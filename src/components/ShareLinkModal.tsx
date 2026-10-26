@@ -8,13 +8,11 @@ import {
   Link2,
   Send,
   Sparkles,
-  Loader2,
 } from 'lucide-react';
 import { SplitBill, BillCalculationSummary } from '../types';
 import {
   buildShareablePaymentLink,
   formatRupiah,
-  fetchShortenedUrl,
 } from '../utils/splitCalculator';
 
 interface ShareLinkModalProps {
@@ -34,8 +32,6 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
 }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [selectedParticipantId, setSelectedParticipantId] = useState<string>('all');
-  const [displayLink, setDisplayLink] = useState<string>('');
-  const [isShortening, setIsShortening] = useState<boolean>(false);
 
   // Immediate base direct link (e.g. https://domain/?pay=sb-123&p=p-1)
   const directLink = buildShareablePaymentLink(
@@ -43,6 +39,8 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
     selectedParticipantId === 'all' ? undefined : selectedParticipantId,
     false
   );
+
+  const displayLink = directLink;
 
   // Make sure the bill is saved to backend when opening share modal
   useEffect(() => {
@@ -53,26 +51,6 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
       body: JSON.stringify(bill),
     }).catch(() => {});
   }, [isOpen, bill]);
-
-  // Generate ultra-short link automatically
-  useEffect(() => {
-    if (!isOpen) return;
-
-    let isMounted = true;
-    setDisplayLink(directLink);
-    setIsShortening(true);
-
-    fetchShortenedUrl(directLink).then((shortUrl) => {
-      if (isMounted) {
-        setDisplayLink(shortUrl);
-        setIsShortening(false);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [isOpen, directLink]);
 
   if (!isOpen) return null;
 
@@ -158,7 +136,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
               </h2>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#00880D]/10 text-[#00880D] flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                Link Pendek
+                Resmi Patungans
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -213,22 +191,15 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
             </div>
           </div>
 
-          {/* Direct Short Link Box */}
+          {/* Direct Link Box */}
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
             <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
               <span className="flex items-center gap-1.5 font-bold text-slate-700">
                 <Link2 className="w-3.5 h-3.5 text-[#00880D]" />
-                Link Singkat Siap Kirim
+                Link Pembayaran Siap Kirim
               </span>
-              <span className="text-[11px] font-mono text-slate-500 flex items-center gap-1">
-                {isShortening ? (
-                  <>
-                    <Loader2 className="w-3 h-3 animate-spin text-[#00AED6]" />
-                    Memperpendek link...
-                  </>
-                ) : (
-                  `${displayLink.length} karakter`
-                )}
+              <span className="text-[11px] font-mono text-slate-500">
+                {displayLink.length} karakter
               </span>
             </div>
             <div className="flex items-center gap-2">

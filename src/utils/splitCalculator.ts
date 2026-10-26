@@ -434,16 +434,5 @@ export function buildShareablePaymentLink(
 }
 
 export async function fetchShortenedUrl(longUrl: string): Promise<string> {
-  try {
-    const res = await fetch(`/api/shorten?url=${encodeURIComponent(longUrl)}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.shortUrl) {
-        return data.shortUrl;
-      }
-    }
-  } catch {
-    // fallback
-  }
   return longUrl;
 }
