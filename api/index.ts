@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 export const app = express();
 app.use(express.json({ limit: "15mb" }));
@@ -13,9 +13,11 @@ const DATA_DIR = isServerless
   ? path.join(os.tmpdir(), "patunganpay-data")
   : path.resolve(process.cwd(), "data");
 const BILLS_FILE = path.join(DATA_DIR, "bills.json");
+const USERS_FILE = path.join(DATA_DIR, "users.json");
 
 // In-memory fallback
 const memoryBills: Record<string, any> = {};
+const memoryUsers: Record<string, any> = {};
 
 function ensureDataDir() {
   try {
@@ -25,8 +27,11 @@ function ensureDataDir() {
     if (!fs.existsSync(BILLS_FILE)) {
       fs.writeFileSync(BILLS_FILE, JSON.stringify({}), "utf-8");
     }
+    if (!fs.existsSync(USERS_FILE)) {
+      fs.writeFileSync(USERS_FILE, JSON.stringify({}), "utf-8");
+    }
   } catch {
-    // If filesystem is restricted, memoryBills serves as fallback
+    // If filesystem is restricted, memory objects serve as fallback
   }
 }
 
@@ -54,6 +59,30 @@ function writeBills(bills: Record<string, any>) {
   }
 }
 
+function readUsers(): Record<string, any> {
+  try {
+    ensureDataDir();
+    if (fs.existsSync(USERS_FILE)) {
+      const raw = fs.readFileSync(USERS_FILE, "utf-8");
+      const parsed = JSON.parse(raw || "{}");
+      return { ...memoryUsers, ...parsed };
+    }
+  } catch {
+    // fallback
+  }
+  return memoryUsers;
+}
+
+function writeUsers(users: Record<string, any>) {
+  Object.assign(memoryUsers, users);
+  try {
+    ensureDataDir();
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf-8");
+  } catch {
+    // In-memory fallback already has the data
+  }
+}
+
 export const apiRouter = express.Router();
 
 apiRouter.get("/", (_req, res) => {
@@ -64,14 +93,153 @@ apiRouter.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-// Get all saved split bills
-apiRouter.get("/bills", (_req, res) => {
+// Sync or register a user profile so friends can find them by name/email
+apiRouter.post("/users/sync", (req, res) => {
   try {
+    const { uid, displayName, email, photoURL, phoneOrHandle } = req.body || {};
+    if (!uid && !email) {
+      res.status(400).json({ error: "UID atau email diperlukan." });
+      return;
+    }
+
+    const users = readUsers();
+    const key = uid || String(email).toLowerCase();
+    const existing = users[key] || {};
+
+    users[key] = {
+      uid: uid || existing.uid || key,
+      displayName: String(displayName || existing.displayName || email?.split("@")[0] || "Pengguna").trim(),
+      email: String(email || existing.email || "").trim().toLowerCase(),
+      photoURL: photoURL || existing.photoURL || "",
+      phoneOrHandle: phoneOrHandle || existing.phoneOrHandle || "",
+      updatedAt: new Date().toISOString(),
+    };
+
+    writeUsers(users);
+    res.json({ user: users[key] });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Gagal menyimpan profil pengguna." });
+  }
+});
+
+// Search / list registered users (also extracts known participant profiles from existing bills)
+apiRouter.get("/users", (req, res) => {
+  try {
+    const q = String(req.query.q || "").trim().toLowerCase();
+    const usersMap = readUsers();
     const bills = readBills();
-    const list = Object.values(bills).sort(
-      (a: any, b: any) =>
-        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+
+    // Also harvest any registered owners/participants from bills so directory is always rich
+    const combined = new Map<string, any>();
+
+    for (const u of Object.values(usersMap)) {
+      if (u && (u.email || u.uid)) {
+        const key = (u.email || u.uid).toLowerCase();
+        combined.set(key, u);
+      }
+    }
+
+    for (const bill of Object.values(bills)) {
+      if (bill?.ownerId && bill?.ownerEmail) {
+        const key = String(bill.ownerEmail).toLowerCase();
+        if (!combined.has(key)) {
+          combined.set(key, {
+            uid: bill.ownerId,
+            displayName: bill.creatorName || bill.ownerEmail.split("@")[0],
+            email: String(bill.ownerEmail).toLowerCase(),
+            photoURL: "",
+          });
+        }
+      }
+      if (Array.isArray(bill?.participants)) {
+        for (const p of bill.participants) {
+          if (p?.email) {
+            const key = String(p.email).toLowerCase();
+            if (!combined.has(key)) {
+              combined.set(key, {
+                uid: p.userId || key,
+                displayName: p.name || p.email.split("@")[0],
+                email: key,
+                photoURL: p.photoURL || "",
+                phoneOrHandle: p.phoneOrHandle || "",
+              });
+            }
+          }
+        }
+      }
+    }
+
+    let list = Array.from(combined.values());
+    if (q) {
+      list = list.filter(
+        (u) =>
+          String(u.displayName || "").toLowerCase().includes(q) ||
+          String(u.email || "").toLowerCase().includes(q) ||
+          String(u.phoneOrHandle || "").toLowerCase().includes(q)
+      );
+    }
+
+    res.json({ users: list.slice(0, 30) });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Gagal memuat daftar pengguna." });
+  }
+});
+
+// Get saved split bills (supports filtering by userId, email, and/or local bill ids)
+apiRouter.get("/bills", (req, res) => {
+  try {
+    const userId = String(req.query.userId || "").trim();
+    const email = String(req.query.email || "").trim().toLowerCase();
+    const idsParam = String(req.query.ids || "").trim();
+    const idSet = new Set(
+      idsParam
+        ? idsParam
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : []
     );
+
+    const bills = readBills();
+    let list = Object.values(bills);
+
+    // If any filter is provided, return bills matching the user's ownership, participation, or visited IDs
+    if (userId || email || idSet.size > 0) {
+      list = list.filter((bill: any) => {
+        if (!bill || !bill.id) return false;
+        const hasTitle = Boolean(String(bill.title || "").trim());
+        const hasItems = Array.isArray(bill.items) && bill.items.length > 0;
+        if (!hasTitle && !hasItems) return false;
+
+        if (idSet.has(bill.id)) return true;
+        if (userId && bill.ownerId === userId) return true;
+        if (email && String(bill.ownerEmail || "").toLowerCase() === email) return true;
+
+        if (Array.isArray(bill.participants)) {
+          const isParticipant = bill.participants.some((p: any) => {
+            if (userId && p.userId && p.userId === userId) return true;
+            if (email && p.email && String(p.email).toLowerCase() === email) return true;
+            return false;
+          });
+          if (isParticipant) return true;
+        }
+        return false;
+      });
+    } else {
+      list = list.filter((bill: any) => {
+        if (!bill || !bill.id) return false;
+        const hasTitle = Boolean(String(bill.title || "").trim());
+        const hasItems = Array.isArray(bill.items) && bill.items.length > 0;
+        return hasTitle || hasItems;
+      });
+    }
+
+    list.sort(
+      (a: any, b: any) =>
+        new Date(b.updatedAt || b.createdAt || 0).getTime() -
+        new Date(a.updatedAt || a.createdAt || 0).getTime()
+    );
+
     res.json({ bills: list });
   } catch (err: any) {
     res.status(500).json({ error: err?.message || "Gagal membaca tagihan." });
@@ -93,6 +261,25 @@ apiRouter.get("/bills/:id", (req, res) => {
   }
 });
 
+// Delete a bill by ID
+apiRouter.delete("/bills/:id", (req, res) => {
+  try {
+    const billId = req.params.id;
+    const bills = readBills();
+    delete bills[billId];
+    delete memoryBills[billId];
+    try {
+      ensureDataDir();
+      fs.writeFileSync(BILLS_FILE, JSON.stringify(bills, null, 2), "utf-8");
+    } catch {
+      // ignore
+    }
+    res.json({ deleted: true, id: billId });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Gagal menghapus tagihan." });
+  }
+});
+
 // Create or update a split bill
 apiRouter.post("/bills", (req, res) => {
   try {
@@ -101,6 +288,33 @@ apiRouter.post("/bills", (req, res) => {
       res.status(400).json({ error: "Data tagihan tidak valid." });
       return;
     }
+
+    // Automatically match participant emails against registered users if userId isn't set yet
+    const users = readUsers();
+    const emailToUser = new Map<string, any>();
+    for (const u of Object.values(users)) {
+      if (u?.email) {
+        emailToUser.set(String(u.email).toLowerCase(), u);
+      }
+    }
+
+    if (Array.isArray(bill.participants)) {
+      bill.participants = bill.participants.map((p: any) => {
+        if (p?.email) {
+          const matched = emailToUser.get(String(p.email).toLowerCase());
+          if (matched) {
+            return {
+              ...p,
+              email: String(p.email).toLowerCase(),
+              userId: p.userId || matched.uid,
+              photoURL: p.photoURL || matched.photoURL || undefined,
+            };
+          }
+        }
+        return p;
+      });
+    }
+
     const bills = readBills();
     bills[bill.id] = {
       ...bill,
@@ -110,6 +324,60 @@ apiRouter.post("/bills", (req, res) => {
     res.json({ bill: bills[bill.id] });
   } catch (err: any) {
     res.status(500).json({ error: err?.message || "Gagal menyimpan tagihan." });
+  }
+});
+
+// Claim / Link a participant slot to a logged-in user account so the bill stays in their history
+apiRouter.post("/bills/:id/claim", (req, res) => {
+  try {
+    const { participantId, userId, email, displayName, photoURL, billSnapshot } = req.body || {};
+    if (!userId && !email) {
+      res.status(400).json({ error: "Data akun diperlukan untuk menautkan tagihan." });
+      return;
+    }
+
+    const bills = readBills();
+    let bill = bills[req.params.id];
+    if (!bill && billSnapshot && billSnapshot.id === req.params.id) {
+      bill = billSnapshot;
+    }
+    if (!bill) {
+      res.status(404).json({ error: "Tagihan tidak ditemukan." });
+      return;
+    }
+
+    const normEmail = email ? String(email).trim().toLowerCase() : undefined;
+    let matchedAny = false;
+
+    bill.participants = (bill.participants || []).map((p: any) => {
+      const isTargetById = participantId && p.id === participantId;
+      const isTargetByEmail = normEmail && p.email && String(p.email).toLowerCase() === normEmail;
+      const isTargetByName =
+        !participantId &&
+        displayName &&
+        String(p.name || "").trim().toLowerCase() === String(displayName).trim().toLowerCase();
+
+      if (isTargetById || isTargetByEmail || isTargetByName) {
+        matchedAny = true;
+        return {
+          ...p,
+          userId: userId || p.userId,
+          email: normEmail || p.email,
+          photoURL: photoURL || p.photoURL,
+        };
+      }
+      return p;
+    });
+
+    if (matchedAny) {
+      bill.updatedAt = new Date().toISOString();
+      bills[bill.id] = bill;
+      writeBills(bills);
+    }
+
+    res.json({ bill, linked: matchedAny });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Gagal menautkan akun ke tagihan." });
   }
 });
 
@@ -123,6 +391,9 @@ apiRouter.patch("/bills/:id/pay", (req, res) => {
       paidNote,
       proofImageUrl,
       proofRefNumber,
+      userId,
+      email,
+      photoURL,
       billSnapshot,
     } = req.body;
     const bills = readBills();
@@ -145,6 +416,9 @@ apiRouter.patch("/bills/:id/pay", (req, res) => {
           paidAt: status === "unpaid" ? undefined : new Date().toISOString(),
           paidVia: paidVia || p.paidVia || "Transfer",
           paidNote: paidNote !== undefined ? paidNote : p.paidNote,
+          userId: userId || p.userId,
+          email: email ? String(email).toLowerCase() : p.email,
+          photoURL: photoURL || p.photoURL,
           proofImageUrl:
             status === "unpaid"
               ? undefined

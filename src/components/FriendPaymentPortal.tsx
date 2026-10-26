@@ -22,11 +22,16 @@ import {
 } from '../types';
 import { formatRupiah, buildShareablePaymentLink } from '../utils/splitCalculator';
 import { DynamicQRISCard } from './DynamicQRISCard';
+import type { User } from '../firebase';
 
 interface FriendPaymentPortalProps {
   bill: SplitBill;
   summary: BillCalculationSummary;
   initialParticipantId?: string;
+  canEdit?: boolean;
+  currentUser?: User | null;
+  onLoginGoogle?: () => void;
+  onClaimParticipant?: (participantId: string) => void;
   onUpdatePaymentStatus: (
     participantId: string,
     status: PaymentStatus,
@@ -36,6 +41,7 @@ interface FriendPaymentPortalProps {
     proofRefNumber?: string
   ) => void;
   onBackToEditor: () => void;
+  onOpenHistory?: () => void;
 }
 
 const AVATAR_COLORS = [
@@ -63,13 +69,27 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
   bill,
   summary,
   initialParticipantId,
+  canEdit = false,
+  currentUser,
+  onLoginGoogle,
+  onClaimParticipant,
   onUpdatePaymentStatus,
   onBackToEditor,
+  onOpenHistory,
 }) => {
   const defaultParticipant =
     summary.participantBreakdowns.find(
       (b) => b.participant.id === initialParticipantId
     ) ||
+    (currentUser
+      ? summary.participantBreakdowns.find(
+          (b) =>
+            (b.participant.userId && b.participant.userId === currentUser.uid) ||
+            (b.participant.email &&
+              currentUser.email &&
+              b.participant.email.toLowerCase() === currentUser.email.toLowerCase())
+        )
+      : undefined) ||
     summary.participantBreakdowns.find((b) => b.participant.status !== 'paid') ||
     summary.participantBreakdowns[0];
 
@@ -127,16 +147,18 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
             Belum Ada Anggota di Split Bill Ini
           </h1>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Tambahkan nama teman dan daftar pesanan terlebih dahulu di halaman Buat Split Bill sebelum membuka link pembayaran.
+            Tagihan ini belum memiliki daftar anggota dan rincian pesanan.
           </p>
-          <button
-            type="button"
-            onClick={onBackToEditor}
-            className="min-h-[44px] px-5 py-2.5 rounded-full bg-[#00AED6] hover:bg-[#0099BD] text-white text-xs font-extrabold inline-flex items-center gap-2 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Kembali ke Buat Split Bill
-          </button>
+          {canEdit && (
+            <button
+              type="button"
+              onClick={onBackToEditor}
+              className="min-h-[44px] px-5 py-2.5 rounded-full bg-[#00AED6] hover:bg-[#0099BD] text-white text-xs font-extrabold inline-flex items-center gap-2 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Kembali ke Buat Split Bill
+            </button>
+          )}
         </div>
       </div>
     );
@@ -169,14 +191,30 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
     <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
       {/* Top Action Bar for Portal Mode */}
       <div className="flex items-center justify-between gap-2 pb-4">
-        <button
-          type="button"
-          onClick={onBackToEditor}
-          className="min-h-[42px] px-3.5 sm:px-4 py-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors whitespace-nowrap"
-        >
-          <ArrowLeft className="w-4 h-4 text-[#00AED6]" />
-          <span>Kembali ke Editor</span>
-        </button>
+        {canEdit ? (
+          <button
+            type="button"
+            onClick={onBackToEditor}
+            className="min-h-[42px] px-3.5 sm:px-4 py-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors whitespace-nowrap"
+          >
+            <ArrowLeft className="w-4 h-4 text-[#00AED6]" />
+            <span>Edit Struk (Pembuat)</span>
+          </button>
+        ) : onOpenHistory ? (
+          <button
+            type="button"
+            onClick={onOpenHistory}
+            className="min-h-[42px] px-3.5 sm:px-4 py-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors whitespace-nowrap"
+          >
+            <Receipt className="w-4 h-4 text-[#00AED6]" />
+            <span>Lihat Riwayat Patungan Saya</span>
+          </button>
+        ) : (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-bold text-slate-600">
+            <Receipt className="w-3.5 h-3.5 text-[#00AED6]" />
+            <span>Halaman Pembayaran Patungan</span>
+          </div>
+        )}
 
         <button
           type="button"
@@ -266,6 +304,12 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
           {summary.participantBreakdowns.map((b, idx) => {
             const isSelected = b.participant.id === activeBreakdown.participant.id;
             const isPaid = b.participant.status === 'paid';
+            const isMyAccount =
+              Boolean(currentUser) &&
+              ((b.participant.userId && b.participant.userId === currentUser?.uid) ||
+                (b.participant.email &&
+                  currentUser?.email &&
+                  b.participant.email.toLowerCase() === currentUser.email.toLowerCase()));
             return (
               <button
                 key={b.participant.id}
@@ -283,16 +327,30 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div
-                    className={`w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-xs shrink-0 ${getAvatarColor(
-                      idx
-                    )}`}
-                  >
-                    {getInitials(b.participant.name)}
-                  </div>
+                  {b.participant.photoURL ? (
+                    <img
+                      src={b.participant.photoURL}
+                      alt={b.participant.name}
+                      referrerPolicy="no-referrer"
+                      className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
+                    />
+                  ) : (
+                    <div
+                      className={`w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-xs shrink-0 ${getAvatarColor(
+                        idx
+                      )}`}
+                    >
+                      {getInitials(b.participant.name)}
+                    </div>
+                  )}
                   <div className="min-w-0">
-                    <div className="text-xs sm:text-sm font-extrabold text-slate-900 truncate">
-                      {b.participant.name}
+                    <div className="text-xs sm:text-sm font-extrabold text-slate-900 truncate flex items-center gap-1">
+                      <span className="truncate">{b.participant.name}</span>
+                      {isMyAccount && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-slate-900 text-white text-[9px] font-bold shrink-0">
+                          Akunmu
+                        </span>
+                      )}
                     </div>
                     <div className="text-[11px] flex items-center gap-1 mt-0.5">
                       {isPaid ? (
@@ -320,6 +378,57 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
               </button>
             );
           })}
+        </div>
+
+        {/* Account & Personal History Sync Strip */}
+        <div className="mt-3.5 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+          {currentUser ? (
+            (activeBreakdown.participant.userId &&
+              activeBreakdown.participant.userId === currentUser.uid) ||
+            (activeBreakdown.participant.email &&
+              currentUser.email &&
+              activeBreakdown.participant.email.toLowerCase() ===
+                currentUser.email.toLowerCase()) ? (
+              <div className="flex items-center gap-2 text-emerald-700 font-semibold">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-[#00880D]" />
+                <span>
+                  Bagian <strong>{activeBreakdown.participant.name}</strong> sudah tertaut ke akun{' '}
+                  <strong>{currentUser.email}</strong> &amp; tersimpan di Riwayatmu.
+                </span>
+              </div>
+            ) : (
+              <>
+                <span className="text-slate-600">
+                  Apakah kamu <strong>{activeBreakdown.participant.name}</strong>? Tautkan ke akun{' '}
+                  <strong>{currentUser.email}</strong> agar struk ini tersimpan di Riwayat akunmu.
+                </span>
+                {onClaimParticipant && (
+                  <button
+                    type="button"
+                    onClick={() => onClaimParticipant(activeBreakdown.participant.id)}
+                    className="h-8 px-3.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold shrink-0 transition-colors"
+                  >
+                    Tautkan sebagai Tagihan Saya
+                  </button>
+                )}
+              </>
+            )
+          ) : (
+            <>
+              <span className="text-slate-500">
+                Riwayat patungan ini otomatis tersimpan di browser HP ini. Login Google jika ingin menyimpannya permanen di akunmu.
+              </span>
+              {onLoginGoogle && (
+                <button
+                  type="button"
+                  onClick={onLoginGoogle}
+                  className="h-8 px-3.5 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-[11px] font-bold shrink-0 transition-colors"
+                >
+                  Login &amp; Simpan ke Akun
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
 

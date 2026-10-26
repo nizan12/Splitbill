@@ -4,10 +4,22 @@ export type ExtraSplitRule = 'proportional' | 'equal';
 
 export type PaymentStatus = 'unpaid' | 'pending_verification' | 'paid';
 
+export interface RegisteredUser {
+  uid: string;
+  displayName: string;
+  email: string;
+  photoURL?: string;
+  phoneOrHandle?: string;
+  updatedAt?: string;
+}
+
 export interface Participant {
   id: string;
   name: string;
   phoneOrHandle?: string;
+  email?: string;
+  userId?: string;
+  photoURL?: string;
   isOwner?: boolean;
   status: PaymentStatus;
   paidAt?: string;
@@ -21,7 +33,7 @@ export interface Participant {
 export interface SavedContactGroup {
   id: string;
   name: string;
-  members: Array<{ name: string; phoneOrHandle: string }>;
+  members: Array<{ name: string; phoneOrHandle: string; email?: string; userId?: string }>;
 }
 
 export interface BillItem {

@@ -18,6 +18,9 @@ import {
   Users,
   Wallet,
   History,
+  UserCheck,
+  Mail,
+  Search,
 } from 'lucide-react';
 import {
   SplitBill,
@@ -25,6 +28,7 @@ import {
   BillItem,
   PaymentChannel,
   PaymentStatus,
+  RegisteredUser,
 } from './types';
 import { createEmptyBill } from './data/presets';
 import {
@@ -50,6 +54,146 @@ import {
 } from './firebase';
 
 const BASE_STORAGE_KEY = 'patunganpay_bills_clean_v2';
+const VISITED_IDS_KEY = 'patunganpay_visited_bill_ids_v1';
+const CREATED_IDS_KEY = 'patunganpay_created_bill_ids_v1';
+const DELETED_IDS_KEY = 'patunganpay_deleted_bill_ids_v1';
+
+function getDeletedBillIds(): string[] {
+  try {
+    const raw = localStorage.getItem(DELETED_IDS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function addDeletedBillId(billId: string) {
+  if (!billId) return;
+  try {
+    const current = getDeletedBillIds();
+    if (!current.includes(billId)) {
+      const next = [billId, ...current].slice(0, 100);
+      localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(next));
+    }
+    const visited = getVisitedBillIds().filter((id) => id !== billId);
+    localStorage.setItem(VISITED_IDS_KEY, JSON.stringify(visited));
+    const created = getCreatedBillIds().filter((id) => id !== billId);
+    localStorage.setItem(CREATED_IDS_KEY, JSON.stringify(created));
+  } catch {
+    // ignore
+  }
+}
+
+function isBillMeaningful(bill: SplitBill | null | undefined): boolean {
+  if (!bill || !bill.id) return false;
+  const hasTitle = Boolean(bill.title && bill.title.trim().length > 0);
+  const hasItems = Array.isArray(bill.items) && bill.items.length > 0;
+  return hasTitle || hasItems;
+}
+
+function getVisitedBillIds(): string[] {
+  try {
+    const raw = localStorage.getItem(VISITED_IDS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    const deleted = new Set(getDeletedBillIds());
+    return Array.isArray(parsed)
+      ? parsed.filter((id) => Boolean(id) && !deleted.has(id))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function addVisitedBillId(billId: string) {
+  if (!billId) return;
+  if (getDeletedBillIds().includes(billId)) return;
+  try {
+    const current = getVisitedBillIds();
+    if (!current.includes(billId)) {
+      const next = [billId, ...current].slice(0, 50);
+      localStorage.setItem(VISITED_IDS_KEY, JSON.stringify(next));
+    }
+  } catch {
+    // ignore
+  }
+}
+
+function getCreatedBillIds(): string[] {
+  try {
+    const raw = localStorage.getItem(CREATED_IDS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function addCreatedBillId(billId: string) {
+  if (!billId) return;
+  try {
+    const current = getCreatedBillIds();
+    if (!current.includes(billId)) {
+      const next = [billId, ...current].slice(0, 50);
+      localStorage.setItem(CREATED_IDS_KEY, JSON.stringify(next));
+    }
+  } catch {
+    // ignore
+  }
+}
+
+function canUserEditBill(
+  bill: SplitBill,
+  user: User | null,
+  isFromSharedUrl: boolean
+): boolean {
+  // If bill has a registered owner account, ONLY that logged-in owner can edit it
+  if (bill.ownerId || bill.ownerEmail) {
+    if (!user) return false;
+    if (bill.ownerId && bill.ownerId === user.uid) return true;
+    if (
+      bill.ownerEmail &&
+      user.email &&
+      bill.ownerEmail.toLowerCase() === user.email.toLowerCase()
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  // If bill was created without an account (Guest), shared URL is strictly read-only
+  if (isFromSharedUrl) return false;
+
+  return getCreatedBillIds().includes(bill.id);
+}
+
+function mergeBillsList(primary: SplitBill[], secondary: SplitBill[]): SplitBill[] {
+  const deletedSet = new Set(getDeletedBillIds());
+  const map = new Map<string, SplitBill>();
+  for (const b of [...primary, ...secondary]) {
+    if (!b || !b.id) continue;
+    if (deletedSet.has(b.id)) continue;
+    if (!isBillMeaningful(b)) continue;
+    const existing = map.get(b.id);
+    if (!existing) {
+      map.set(b.id, b);
+    } else {
+      const existingTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
+      const incomingTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      if (incomingTime >= existingTime) {
+        map.set(b.id, b);
+      }
+    }
+  }
+  return Array.from(map.values()).sort(
+    (a, b) =>
+      new Date(b.updatedAt || b.createdAt || 0).getTime() -
+      new Date(a.updatedAt || a.createdAt || 0).getTime()
+  );
+}
 
 const AVATAR_COLORS = [
   'bg-[#00AED6] text-white',
@@ -76,15 +220,38 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isSharedLinkMode, setIsSharedLinkMode] = useState<boolean>(() =>
+    Boolean(new URLSearchParams(window.location.search).get('pay'))
+  );
 
   const storageKey = currentUser
     ? `${BASE_STORAGE_KEY}_${currentUser.uid}`
     : `${BASE_STORAGE_KEY}_guest`;
 
-  // Riwayat starts empty until user logs in with Google or creates a bill while logged in
-  const [savedBills, setSavedBills] = useState<SplitBill[]>([]);
-  const [activeBill, setActiveBill] = useState<SplitBill>(() => createEmptyBill());
-  const [viewMode, setViewMode] = useState<'editor' | 'saved' | 'portal'>('editor');
+  const [savedBills, setSavedBills] = useState<SplitBill[]>(() => {
+    try {
+      const raw = localStorage.getItem(`${BASE_STORAGE_KEY}_guest`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return mergeBillsList(parsed, []);
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  });
+  const [activeBill, setActiveBill] = useState<SplitBill>(() => {
+    const initial = createEmptyBill();
+    if (!new URLSearchParams(window.location.search).get('pay')) {
+      addCreatedBillId(initial.id);
+    }
+    return initial;
+  });
+  const [viewMode, setViewMode] = useState<'editor' | 'saved' | 'portal'>(() =>
+    new URLSearchParams(window.location.search).get('pay') ? 'portal' : 'editor'
+  );
   // Mobile sub-panel inside editor so thumb users don't have to scroll 2500px
   const [mobileEditorTab, setMobileEditorTab] = useState<'input' | 'summary'>('input');
   const [portalParticipantId, setPortalParticipantId] = useState<
@@ -98,6 +265,12 @@ export default function App() {
   // Form inputs
   const [newFriendName, setNewFriendName] = useState('');
   const [newFriendPhone, setNewFriendPhone] = useState('');
+  const [newFriendEmail, setNewFriendEmail] = useState('');
+  const [selectedRegisteredUser, setSelectedRegisteredUser] =
+    useState<RegisteredUser | null>(null);
+  const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
+  const [showUserSuggestions, setShowUserSuggestions] = useState(false);
+
   const [newItemName, setNewItemName] = useState('');
   const [newItemQty, setNewItemQty] = useState<number>(1);
   const [newItemPrice, setNewItemPrice] = useState<string>('');
@@ -122,6 +295,53 @@ export default function App() {
     null
   );
 
+  // Fetch registered users directory so autocomplete works when adding friends
+  const refreshRegisteredUsers = () => {
+    fetch('/api/users')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (Array.isArray(data?.users)) {
+          setRegisteredUsers(data.users);
+        }
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    refreshRegisteredUsers();
+  }, []);
+
+  // Refresh bills from server for both logged-in user (by userId + email + visitedIds) and guest (by visitedIds)
+  const syncBillsFromServer = (user: User | null) => {
+    const visitedIds = getVisitedBillIds();
+    const query = new URLSearchParams();
+    if (user?.uid) query.set('userId', user.uid);
+    if (user?.email) query.set('email', user.email);
+    if (visitedIds.length > 0) query.set('ids', visitedIds.join(','));
+
+    if (!user?.uid && !user?.email && visitedIds.length === 0) return;
+
+    fetch(`/api/bills?${query.toString()}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (Array.isArray(data?.bills)) {
+          setSavedBills((prev) => {
+            const merged = mergeBillsList(data.bills, prev);
+            try {
+              const key = user
+                ? `${BASE_STORAGE_KEY}_${user.uid}`
+                : `${BASE_STORAGE_KEY}_guest`;
+              localStorage.setItem(key, JSON.stringify(merged));
+            } catch {
+              // ignore
+            }
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
+  };
+
   // Listen to Firebase Google Auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -130,31 +350,81 @@ export default function App() {
 
       if (user) {
         syncUserProfileToFirestore(user).catch(() => {});
+        fetch('/api/users/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: user.uid,
+            displayName: user.displayName || '',
+            email: user.email || '',
+            photoURL: user.photoURL || '',
+          }),
+        })
+          .then(() => refreshRegisteredUsers())
+          .catch(() => {});
 
-        const params = new URLSearchParams(window.location.search);
-        if (!params.get('pay')) {
-          try {
-            const userKey = `${BASE_STORAGE_KEY}_${user.uid}`;
-            const raw = localStorage.getItem(userKey);
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                setSavedBills(parsed);
-                setActiveBill(parsed[0]);
-                return;
-              }
-            }
-          } catch {
-            // ignore
-          }
+        // Load and merge guest bills + user's local bills
+        let combinedLocal: SplitBill[] = [];
+        try {
+          const userKey = `${BASE_STORAGE_KEY}_${user.uid}`;
+          const guestKey = `${BASE_STORAGE_KEY}_guest`;
+          const rawUser = localStorage.getItem(userKey);
+          const rawGuest = localStorage.getItem(guestKey);
+          const parsedUser = rawUser ? JSON.parse(rawUser) : [];
+          const parsedGuest = rawGuest ? JSON.parse(rawGuest) : [];
+          combinedLocal = mergeBillsList(
+            Array.isArray(parsedUser) ? parsedUser : [],
+            Array.isArray(parsedGuest) ? parsedGuest : []
+          );
+          setSavedBills(combinedLocal);
+          localStorage.setItem(userKey, JSON.stringify(combinedLocal));
+          localStorage.setItem(
+            guestKey,
+            JSON.stringify(
+              mergeBillsList(Array.isArray(parsedGuest) ? parsedGuest : [], [])
+            )
+          );
+        } catch {
+          // ignore
         }
 
-        setActiveBill((prev) => ({
-          ...prev,
-          ownerId: user.uid,
-          ownerEmail: user.email || undefined,
-          creatorName: prev.creatorName || user.displayName || '',
-        }));
+        const params = new URLSearchParams(window.location.search);
+        const payParam = params.get('pay');
+        if (!payParam && combinedLocal.length > 0) {
+          setActiveBill(combinedLocal[0]);
+        } else if (!payParam) {
+          setActiveBill((prev) => {
+            if (!getCreatedBillIds().includes(prev.id)) return prev;
+            return {
+              ...prev,
+              ownerId: prev.ownerId || user.uid,
+              ownerEmail: prev.ownerEmail || user.email || undefined,
+              creatorName: prev.creatorName || user.displayName || '',
+            };
+          });
+        }
+
+        syncBillsFromServer(user);
+      } else {
+        // Guest mode: load guest bills and sync any visited bill IDs from server
+        try {
+          const guestRaw = localStorage.getItem(`${BASE_STORAGE_KEY}_guest`);
+          if (guestRaw) {
+            const parsed = JSON.parse(guestRaw);
+            const cleaned = mergeBillsList(
+              Array.isArray(parsed) ? parsed : [],
+              []
+            );
+            setSavedBills(cleaned);
+            localStorage.setItem(
+              `${BASE_STORAGE_KEY}_guest`,
+              JSON.stringify(cleaned)
+            );
+          }
+        } catch {
+          // ignore
+        }
+        syncBillsFromServer(null);
       }
     });
 
@@ -165,13 +435,16 @@ export default function App() {
     setAuthError(null);
     try {
       const user = await signInWithGoogle();
-      if (user) {
-        setActiveBill((prev) => ({
-          ...prev,
-          ownerId: user.uid,
-          ownerEmail: user.email || undefined,
-          creatorName: prev.creatorName || user.displayName || '',
-        }));
+      if (user && !isSharedLinkMode) {
+        setActiveBill((prev) => {
+          if (!getCreatedBillIds().includes(prev.id)) return prev;
+          return {
+            ...prev,
+            ownerId: prev.ownerId || user.uid,
+            ownerEmail: prev.ownerEmail || user.email || undefined,
+            creatorName: prev.creatorName || user.displayName || '',
+          };
+        });
       }
     } catch (err: any) {
       console.error('Google Sign-In Error:', err);
@@ -179,7 +452,6 @@ export default function App() {
       const message = err?.message || '';
 
       if (code === 'auth/popup-closed-by-user') {
-        // User closed popup deliberately
         return;
       }
 
@@ -207,7 +479,6 @@ export default function App() {
     try {
       await logoutGoogle();
       const empty = createEmptyBill();
-      setSavedBills([empty]);
       setActiveBill(empty);
       setViewMode('editor');
     } catch {
@@ -223,6 +494,7 @@ export default function App() {
     const encodedData = params.get('d');
 
     if (payBillId) {
+      addVisitedBillId(payBillId);
       let decodedFromUrl: SplitBill | null = null;
       if (encodedData) {
         decodedFromUrl = decodeBillFromUrlParam(encodedData);
@@ -253,26 +525,24 @@ export default function App() {
   }, []);
 
   const summary = useMemo(() => calculateSplitBill(activeBill), [activeBill]);
+  const canEditActiveBill = useMemo(
+    () => canUserEditBill(activeBill, currentUser, isSharedLinkMode),
+    [activeBill, currentUser, isSharedLinkMode]
+  );
 
-  // Clear obsolete guest local storage on initial load
+  // Sync activeBill into savedBills, localStorage (both Guest & Logged-in!), Express backend, and Firestore
   useEffect(() => {
-    try {
-      localStorage.removeItem(`${BASE_STORAGE_KEY}_guest`);
-    } catch {
-      // ignore
-    }
-  }, []);
+    const hasContent =
+      Boolean(activeBill.title.trim()) ||
+      activeBill.items.length > 0 ||
+      summary.grandTotal > 0;
 
-  // Sync activeBill into savedBills, localStorage, Express backend, and Firestore
-  useEffect(() => {
-    // If not logged in, do not clutter history with draft bills
-    if (!currentUser) return;
+    if (!hasContent) return;
+
+    addVisitedBillId(activeBill.id);
 
     setSavedBills((prev) => {
-      const exists = prev.some((b) => b.id === activeBill.id);
-      const next = exists
-        ? prev.map((b) => (b.id === activeBill.id ? activeBill : b))
-        : [activeBill, ...prev];
+      const next = mergeBillsList([activeBill], prev);
       try {
         localStorage.setItem(storageKey, JSON.stringify(next));
       } catch {
@@ -281,12 +551,23 @@ export default function App() {
       return next;
     });
 
+    // Only the creator/owner of the bill is allowed to push full bill edits to the server
+    if (!canEditActiveBill) return;
+
     const timer = setTimeout(() => {
       fetch('/api/bills', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(activeBill),
-      }).catch(() => {});
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          // If server auto-linked any participant email to a registered userId, update local state quietly
+          if (data?.bill?.participants) {
+            refreshRegisteredUsers();
+          }
+        })
+        .catch(() => {});
 
       if (currentUser && (!activeBill.ownerId || activeBill.ownerId === currentUser.uid)) {
         syncBillMetadataToFirestore({
@@ -305,7 +586,7 @@ export default function App() {
     }, 450);
 
     return () => clearTimeout(timer);
-  }, [activeBill, currentUser, storageKey, summary.grandTotal, summary.paidCount]);
+  }, [activeBill, canEditActiveBill, currentUser, storageKey, summary.grandTotal, summary.paidCount]);
 
   const handleCopyText = async (text: string, id: string) => {
     try {
@@ -387,18 +668,24 @@ export default function App() {
   };
 
   const handleCreateNewBill = () => {
+    if (window.location.search) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    setIsSharedLinkMode(false);
     const freshBill = createEmptyBill();
-    freshBill.creatorName =
-      activeBill.creatorName || currentUser?.displayName || '';
+    addCreatedBillId(freshBill.id);
+    freshBill.creatorName = currentUser?.displayName || '';
     freshBill.ownerId = currentUser?.uid;
     freshBill.ownerEmail = currentUser?.email || undefined;
-    freshBill.paymentChannels = activeBill.paymentChannels;
+    freshBill.paymentChannels = canEditActiveBill ? activeBill.paymentChannels : [];
     setActiveBill(freshBill);
     setViewMode('editor');
     setMobileEditorTab('input');
   };
 
   const handleDeleteSavedBill = (billId: string) => {
+    addDeletedBillId(billId);
+    fetch(`/api/bills/${billId}`, { method: 'DELETE' }).catch(() => {});
     if (currentUser) {
       deleteBillFromFirestore(billId).catch(() => {});
     }
@@ -406,26 +693,109 @@ export default function App() {
       const filtered = prev.filter((b) => b.id !== billId);
       try {
         localStorage.setItem(storageKey, JSON.stringify(filtered));
+        const guestKey = `${BASE_STORAGE_KEY}_guest`;
+        const guestRaw = localStorage.getItem(guestKey);
+        if (guestRaw) {
+          const guestParsed = JSON.parse(guestRaw);
+          if (Array.isArray(guestParsed)) {
+            localStorage.setItem(
+              guestKey,
+              JSON.stringify(guestParsed.filter((b: SplitBill) => b.id !== billId))
+            );
+          }
+        }
       } catch {
         // ignore
       }
       if (activeBill.id === billId) {
-        setActiveBill(filtered[0] || createEmptyBill());
+        const nextBill = filtered[0] || createEmptyBill();
+        if (!filtered[0]) addCreatedBillId(nextBill.id);
+        setActiveBill(nextBill);
       }
       return filtered;
     });
   };
 
-  // Add Participant
+  // Combine registered users from server with previous friends from savedBills for smart suggestions
+  const knownContacts = useMemo(() => {
+    const map = new Map<string, RegisteredUser>();
+    for (const u of registeredUsers) {
+      const key = (u.email || u.uid || u.displayName).toLowerCase();
+      if (key) map.set(key, u);
+    }
+    for (const bill of savedBills) {
+      for (const p of bill.participants || []) {
+        const key = (p.email || p.name || '').trim().toLowerCase();
+        if (!key) continue;
+        if (!map.has(key)) {
+          map.set(key, {
+            uid: p.userId || '',
+            displayName: p.name,
+            email: p.email || '',
+            photoURL: p.photoURL,
+            phoneOrHandle: p.phoneOrHandle,
+          });
+        }
+      }
+    }
+    return Array.from(map.values());
+  }, [registeredUsers, savedBills]);
+
+  const filteredUserSuggestions = useMemo(() => {
+    const q = (newFriendName || newFriendEmail).trim().toLowerCase();
+    const existingEmails = new Set(
+      activeBill.participants
+        .map((p) => p.email?.toLowerCase())
+        .filter(Boolean)
+    );
+    const existingNames = new Set(
+      activeBill.participants.map((p) => p.name.trim().toLowerCase())
+    );
+
+    return knownContacts
+      .filter((u) => {
+        if (u.email && existingEmails.has(u.email.toLowerCase())) return false;
+        if (
+          !u.email &&
+          existingNames.has(u.displayName.trim().toLowerCase())
+        ) {
+          return false;
+        }
+        if (!q) return true;
+        return (
+          u.displayName.toLowerCase().includes(q) ||
+          (u.email && u.email.toLowerCase().includes(q)) ||
+          (u.phoneOrHandle && u.phoneOrHandle.toLowerCase().includes(q))
+        );
+      })
+      .slice(0, 8);
+  }, [knownContacts, newFriendName, newFriendEmail, activeBill.participants]);
+
+  // Add Participant (supports manual input or linked registered account)
   const handleAddParticipant = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = newFriendName.trim();
     if (!trimmed) return;
 
+    const emailClean = newFriendEmail.trim().toLowerCase() || undefined;
+    const matchedUser =
+      selectedRegisteredUser ||
+      (emailClean
+        ? knownContacts.find((u) => u.email?.toLowerCase() === emailClean)
+        : knownContacts.find(
+            (u) =>
+              u.displayName.trim().toLowerCase() === trimmed.toLowerCase() &&
+              Boolean(u.email)
+          ));
+
     const newParticipant: Participant = {
       id: 'p-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
       name: trimmed,
-      phoneOrHandle: newFriendPhone.trim() || undefined,
+      phoneOrHandle:
+        newFriendPhone.trim() || matchedUser?.phoneOrHandle || undefined,
+      email: emailClean || matchedUser?.email || undefined,
+      userId: matchedUser?.uid || undefined,
+      photoURL: matchedUser?.photoURL || undefined,
       status: 'unpaid',
       equalPortions: 1,
     };
@@ -436,6 +806,72 @@ export default function App() {
     }));
     setNewFriendName('');
     setNewFriendPhone('');
+    setNewFriendEmail('');
+    setSelectedRegisteredUser(null);
+    setShowUserSuggestions(false);
+  };
+
+  const handleQuickAddRegisteredUser = (user: RegisteredUser) => {
+    const alreadyExists = activeBill.participants.some(
+      (p) =>
+        (user.email && p.email?.toLowerCase() === user.email.toLowerCase()) ||
+        p.name.trim().toLowerCase() === user.displayName.trim().toLowerCase()
+    );
+    if (alreadyExists) return;
+
+    const newParticipant: Participant = {
+      id: 'p-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      name: user.displayName,
+      phoneOrHandle: user.phoneOrHandle || undefined,
+      email: user.email || undefined,
+      userId: user.uid || undefined,
+      photoURL: user.photoURL || undefined,
+      status: 'unpaid',
+      equalPortions: 1,
+    };
+
+    setActiveBill((prev) => ({
+      ...prev,
+      participants: [...prev.participants, newParticipant],
+    }));
+    setNewFriendName('');
+    setNewFriendPhone('');
+    setNewFriendEmail('');
+    setSelectedRegisteredUser(null);
+    setShowUserSuggestions(false);
+  };
+
+  const handleClaimParticipant = (participantId: string) => {
+    if (!currentUser) return;
+
+    setActiveBill((prev) => ({
+      ...prev,
+      participants: prev.participants.map((p) =>
+        p.id === participantId
+          ? {
+              ...p,
+              userId: currentUser.uid,
+              email: currentUser.email?.toLowerCase() || p.email,
+              photoURL: currentUser.photoURL || p.photoURL,
+            }
+          : p
+      ),
+    }));
+
+    fetch(`/api/bills/${activeBill.id}/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        participantId,
+        userId: currentUser.uid,
+        email: currentUser.email,
+        displayName: currentUser.displayName,
+        photoURL: currentUser.photoURL,
+        billSnapshot: activeBill,
+      }),
+    })
+      .then(() => syncBillsFromServer(currentUser))
+      .catch(() => {});
   };
 
   const handleRemoveParticipant = (participantId: string) => {
@@ -494,6 +930,14 @@ export default function App() {
         paidNote,
         proofImageUrl,
         proofRefNumber,
+        userId:
+          viewMode === 'portal' && currentUser ? currentUser.uid : undefined,
+        email:
+          viewMode === 'portal' && currentUser ? currentUser.email : undefined,
+        photoURL:
+          viewMode === 'portal' && currentUser
+            ? currentUser.photoURL
+            : undefined,
         billSnapshot: activeBill,
       }),
     }).catch(() => {});
@@ -731,8 +1175,12 @@ export default function App() {
           href="#top"
           onClick={(e) => {
             e.preventDefault();
-            setViewMode('editor');
-            setMobileEditorTab('input');
+            if (canEditActiveBill) {
+              setViewMode('editor');
+              setMobileEditorTab('input');
+            } else {
+              setViewMode('portal');
+            }
           }}
           className="text-base sm:text-lg font-extrabold tracking-tight text-[#00AED6] font-display whitespace-nowrap shrink-0"
         >
@@ -741,20 +1189,33 @@ export default function App() {
 
         {/* Zone 2: Desktop Navigation Links */}
         <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-600">
+          {canEditActiveBill ? (
+            <button
+              type="button"
+              onClick={() => setViewMode('editor')}
+              className={`hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 ${
+                viewMode === 'editor'
+                  ? 'text-slate-900 font-bold underline underline-offset-8 decoration-2 decoration-[#00AED6]'
+                  : ''
+              }`}
+            >
+              Buat Split Bill
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleCreateNewBill}
+              className="hover:text-slate-900 transition-colors whitespace-nowrap shrink-0"
+            >
+              + Buat Split Bill Baru
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => setViewMode('editor')}
-            className={`hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 ${
-              viewMode === 'editor'
-                ? 'text-slate-900 font-bold underline underline-offset-8 decoration-2 decoration-[#00AED6]'
-                : ''
-            }`}
-          >
-            Buat Split Bill
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('saved')}
+            onClick={() => {
+              syncBillsFromServer(currentUser);
+              setViewMode('saved');
+            }}
             className={`hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 ${
               viewMode === 'saved'
                 ? 'text-slate-900 font-bold underline underline-offset-8 decoration-2 decoration-[#00AED6]'
@@ -781,30 +1242,51 @@ export default function App() {
 
         {/* Zone 3: Primary Action CTA (Touch-friendly 40px+ hitbox) */}
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => setIsScannerOpen(true)}
-            className="min-h-[40px] px-3.5 sm:px-4 py-2 text-xs font-bold text-white bg-[#00880D] hover:bg-[#00700B] active:scale-[0.98] rounded-full transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 shadow-2xs"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Scan Struk</span>
-          </button>
+          {canEditActiveBill ? (
+            <button
+              type="button"
+              onClick={() => setIsScannerOpen(true)}
+              className="min-h-[40px] px-3.5 sm:px-4 py-2 text-xs font-bold text-white bg-[#00880D] hover:bg-[#00700B] active:scale-[0.98] rounded-full transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 shadow-2xs"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Scan Struk</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleCreateNewBill}
+              className="min-h-[40px] px-3.5 sm:px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5"
+            >
+              <FilePlus2 className="w-3.5 h-3.5 text-[#00AED6]" />
+              <span>Buat Struk Sendiri</span>
+            </button>
+          )}
         </div>
       </header>
 
       {/* Main Content Area */}
       <main className="flex-1">
-        {viewMode === 'portal' ? (
+        {viewMode === 'portal' || !canEditActiveBill && viewMode === 'editor' ? (
           <FriendPaymentPortal
             bill={activeBill}
             summary={summary}
             initialParticipantId={portalParticipantId}
+            canEdit={canEditActiveBill}
+            currentUser={currentUser}
+            onLoginGoogle={handleGoogleLogin}
+            onClaimParticipant={handleClaimParticipant}
             onUpdatePaymentStatus={handleUpdatePaymentStatus}
             onBackToEditor={() => {
+              if (!canEditActiveBill) return;
               if (window.location.search) {
                 window.history.replaceState({}, '', window.location.pathname);
               }
+              setIsSharedLinkMode(false);
               setViewMode('editor');
+            }}
+            onOpenHistory={() => {
+              syncBillsFromServer(currentUser);
+              setViewMode('saved');
             }}
           />
         ) : viewMode === 'saved' ? (
@@ -830,12 +1312,12 @@ export default function App() {
                   <div className="text-xs sm:text-sm font-bold text-slate-900 truncate">
                     {currentUser
                       ? currentUser.displayName || currentUser.email
-                      : 'Akun Belum Terhubung'}
+                      : 'Mode Tamu (Tersimpan di Perangkat Ini)'}
                   </div>
                   <div className="text-[11px] text-slate-500 truncate">
                     {currentUser
-                      ? `Tersinkronisasi dengan ${currentUser.email}`
-                      : 'Login Google untuk menyimpan riwayat di cloud'}
+                      ? `Tersinkronisasi otomatis untuk ${currentUser.email}`
+                      : 'Riwayat patungan di HP ini tetap tersimpan. Login Google untuk sinkronisasi lintas perangkat.'}
                   </div>
                 </div>
               </div>
@@ -867,7 +1349,7 @@ export default function App() {
                   Riwayat Split Bill ({savedBills.length})
                 </h1>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Ketuk kartu untuk membuka atau membagikan ulang tagihan
+                  Menampilkan tagihan yang Anda buat maupun tagihan patungan yang menagih akun/perangkat Anda
                 </p>
               </div>
               <button
@@ -890,33 +1372,52 @@ export default function App() {
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-500 mt-1.5 max-w-xs leading-relaxed">
                   {currentUser
-                    ? 'Anda belum memiliki tagihan tersimpan. Buat struk baru atau gunakan scan struk.'
-                    : 'Masuk dengan akun Google untuk menyimpan dan melihat riwayat tagihan Anda secara otomatis di cloud.'}
+                    ? 'Anda belum memiliki tagihan tersimpan atau belum ada teman yang menambahkan email Anda ke patungan.'
+                    : 'Buat struk baru atau buka link patungan dari teman, maka riwayatnya akan otomatis tersimpan di sini.'}
                 </p>
-                {!currentUser ? (
-                  <button
-                    type="button"
-                    onClick={handleGoogleLogin}
-                    className="mt-5 min-h-[44px] px-6 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-sm transition-all"
-                  >
-                    Masuk dengan Google
-                  </button>
-                ) : (
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
                   <button
                     type="button"
                     onClick={handleCreateNewBill}
-                    className="mt-5 min-h-[44px] px-6 py-2.5 rounded-full bg-[#00880D] hover:bg-[#00700B] text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-sm transition-all"
+                    className="min-h-[44px] px-5 py-2.5 rounded-full bg-[#00880D] hover:bg-[#00700B] text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-sm transition-all"
                   >
                     <FilePlus2 className="w-4 h-4" />
                     Buat Struk Baru
                   </button>
-                )}
+                  {!currentUser && (
+                    <button
+                      type="button"
+                      onClick={handleGoogleLogin}
+                      className="min-h-[44px] px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-sm transition-all"
+                    >
+                      Masuk Google
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-5">
                 {savedBills.map((billItem) => {
                   const itemSummary = calculateSplitBill(billItem);
                   const isCurrent = billItem.id === activeBill.id;
+                  const canEditThisBill = canUserEditBill(
+                    billItem,
+                    currentUser,
+                    false
+                  );
+
+                  const myParticipantCalc = currentUser
+                    ? itemSummary.participantBreakdowns.find(
+                        (b) =>
+                          (b.participant.userId &&
+                            b.participant.userId === currentUser.uid) ||
+                          (b.participant.email &&
+                            currentUser.email &&
+                            b.participant.email.toLowerCase() ===
+                              currentUser.email.toLowerCase())
+                      )
+                    : undefined;
+
                   return (
                     <div
                       key={billItem.id}
@@ -928,8 +1429,19 @@ export default function App() {
                     >
                       <div>
                         <div className="flex items-center justify-between gap-2">
-                          <div className="text-xs text-slate-500 flex items-center gap-1.5">
-                            <span className="font-bold text-[#00AED6]">
+                          <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                                canEditThisBill
+                                  ? 'bg-slate-100 text-slate-700'
+                                  : 'bg-[#00AED6]/10 text-[#00AED6]'
+                              }`}
+                            >
+                              {canEditThisBill
+                                ? 'Pembuat Struk'
+                                : 'Ikut Patungan'}
+                            </span>
+                            <span className="font-bold text-slate-700">
                               {billItem.category}
                             </span>
                             <span aria-hidden="true">·</span>
@@ -939,7 +1451,7 @@ export default function App() {
                             type="button"
                             onClick={() => handleDeleteSavedBill(billItem.id)}
                             className="min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-red-600 rounded-full"
-                            title="Hapus tagihan"
+                            title="Hapus dari riwayat"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -947,12 +1459,36 @@ export default function App() {
                         <h2 className="text-base font-extrabold text-slate-900 font-display mt-1">
                           {billItem.title || 'Split Bill Tanpa Judul'}
                         </h2>
+                        {billItem.creatorName && (
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            Penagih: {billItem.creatorName}
+                          </p>
+                        )}
                         <div className="mt-3 pt-3 border-t border-dashed border-slate-200 flex items-baseline justify-between">
                           <span className="text-xs text-slate-500">Total Struk</span>
                           <span className="text-base font-extrabold font-mono tabular-nums text-slate-900">
                             {formatRupiah(itemSummary.grandTotal)}
                           </span>
                         </div>
+                        {myParticipantCalc && (
+                          <div className="mt-1.5 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
+                            <span className="text-slate-600 font-semibold">
+                              Bagianmu ({myParticipantCalc.participant.name})
+                            </span>
+                            <span className="font-mono tabular-nums font-extrabold text-slate-900">
+                              {formatRupiah(myParticipantCalc.finalTotal)}{' '}
+                              <span
+                                className={
+                                  myParticipantCalc.participant.status === 'paid'
+                                    ? 'text-[#00880D]'
+                                    : 'text-amber-600'
+                                }
+                              >
+                                ({myParticipantCalc.participant.status === 'paid' ? 'Lunas' : 'Belum'})
+                              </span>
+                            </span>
+                          </div>
+                        )}
                         <div className="mt-1.5 flex items-center justify-between text-xs">
                           <span className="text-slate-500">Status Lunas</span>
                           <span className="font-mono tabular-nums font-bold text-[#00880D]">
@@ -963,27 +1499,37 @@ export default function App() {
                       </div>
 
                       <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
+                        {canEditThisBill && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsSharedLinkMode(false);
+                              setActiveBill(billItem);
+                              setViewMode('editor');
+                              setMobileEditorTab('input');
+                            }}
+                            className="flex-1 min-h-[42px] py-2 px-3 rounded-full bg-[#00AED6] hover:bg-[#0099BD] text-white text-xs font-bold transition-colors whitespace-nowrap"
+                          >
+                            Edit Struk
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => {
+                            setIsSharedLinkMode(!canEditThisBill);
                             setActiveBill(billItem);
-                            setViewMode('editor');
-                            setMobileEditorTab('input');
-                          }}
-                          className="flex-1 min-h-[42px] py-2 px-3 rounded-full bg-[#00AED6] hover:bg-[#0099BD] text-white text-xs font-bold transition-colors whitespace-nowrap"
-                        >
-                          Edit Struk
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveBill(billItem);
-                            setPortalParticipantId(undefined);
+                            setPortalParticipantId(
+                              myParticipantCalc?.participant.id || undefined
+                            );
                             setViewMode('portal');
                           }}
-                          className="min-h-[42px] py-2 px-4 rounded-full border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors whitespace-nowrap"
+                          className={`min-h-[42px] py-2 px-4 rounded-full text-xs font-bold transition-colors whitespace-nowrap ${
+                            canEditThisBill
+                              ? 'border border-slate-200 hover:bg-slate-50 text-slate-700'
+                              : 'flex-1 bg-slate-900 hover:bg-slate-800 text-white'
+                          }`}
                         >
-                          Buka Link
+                          {canEditThisBill ? 'Buka Link Bayar' : 'Lihat & Bayar Tagihan'}
                         </button>
                       </div>
                     </div>
@@ -1304,51 +1850,172 @@ export default function App() {
 
                 {/* STEP 2: Circular Participant Bubbles Bar */}
                 <section className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-2xs">
-                  <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
                     <div>
                       <h2 className="text-sm sm:text-base font-extrabold text-slate-900 font-display">
                         Teman Patungan ({activeBill.participants.length} Orang)
                       </h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Tambahkan nama teman yang ikut patungan
+                        Bisa pilih dari akun terdaftar, isi email teman (otomatis masuk ke Riwayat akun mereka), atau ketik nama saja tanpa wajib akun
                       </p>
                     </div>
+
+                    {currentUser &&
+                      !activeBill.participants.some(
+                        (p) =>
+                          p.userId === currentUser.uid ||
+                          (p.email &&
+                            currentUser.email &&
+                            p.email.toLowerCase() ===
+                              currentUser.email.toLowerCase())
+                      ) && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleQuickAddRegisteredUser({
+                              uid: currentUser.uid,
+                              displayName:
+                                currentUser.displayName ||
+                                currentUser.email?.split('@')[0] ||
+                                'Saya',
+                              email: currentUser.email || '',
+                              photoURL: currentUser.photoURL || undefined,
+                            })
+                          }
+                          className="h-8 px-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold inline-flex items-center gap-1.5 transition-colors shrink-0"
+                        >
+                          <UserCheck className="w-3.5 h-3.5 text-[#00AED6]" />
+                          <span>+ Masukkan Saya</span>
+                        </button>
+                      )}
                   </div>
 
-                  {/* Mobile-Friendly Add Participant Form */}
+                  {/* Mobile-Friendly Add Participant Form with Email / Registered Account Support */}
                   <form
                     onSubmit={handleAddParticipant}
-                    className="mt-3.5 flex flex-col sm:flex-row gap-2"
+                    className="mt-3.5 space-y-2"
                   >
-                    <div className="flex gap-2 flex-1">
-                      <input
-                        type="text"
-                        value={newFriendName}
-                        onChange={(e) => setNewFriendName(e.target.value)}
-                        placeholder="Nama teman..."
-                        className="flex-1 min-h-[44px] px-3.5 py-2 rounded-2xl border border-slate-300 text-xs font-medium text-slate-800 focus:border-[#00AED6] focus:outline-none"
-                      />
-                      <input
-                        type="tel"
-                        value={newFriendPhone}
-                        onChange={(e) => setNewFriendPhone(e.target.value)}
-                        placeholder="No. WA (opsional)"
-                        className="w-36 sm:w-44 min-h-[44px] px-3 py-2 rounded-2xl border border-slate-300 text-xs font-mono text-slate-800 focus:border-[#00AED6] focus:outline-none"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                      <div className="sm:col-span-5 relative">
+                        <input
+                          type="text"
+                          value={newFriendName}
+                          onFocus={() => setShowUserSuggestions(true)}
+                          onChange={(e) => {
+                            setNewFriendName(e.target.value);
+                            setSelectedRegisteredUser(null);
+                            setShowUserSuggestions(true);
+                          }}
+                          placeholder="Ketik nama atau cari akun teman..."
+                          className="w-full min-h-[42px] px-3.5 py-2 rounded-2xl border border-slate-300 text-xs font-medium text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-4">
+                        <input
+                          type="email"
+                          value={newFriendEmail}
+                          onFocus={() => setShowUserSuggestions(true)}
+                          onChange={(e) => {
+                            setNewFriendEmail(e.target.value);
+                            setShowUserSuggestions(true);
+                          }}
+                          placeholder="Email akun teman (opsional)"
+                          className="w-full min-h-[42px] px-3.5 py-2 rounded-2xl border border-slate-300 text-xs text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-3 flex gap-2">
+                        <input
+                          type="tel"
+                          value={newFriendPhone}
+                          onChange={(e) => setNewFriendPhone(e.target.value)}
+                          placeholder="No. WA (opsional)"
+                          className="w-full min-h-[42px] px-3 py-2 rounded-2xl border border-slate-300 text-xs font-mono text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                        />
+                      </div>
                     </div>
-                    <button
-                      type="submit"
-                      className="min-h-[44px] px-5 py-2.5 rounded-full bg-[#00AED6] hover:bg-[#0099BD] active:scale-[0.98] text-white text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all whitespace-nowrap shrink-0"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Tambah Teman</span>
-                    </button>
+
+                    <div className="flex items-center justify-between gap-2 pt-0.5">
+                      <span className="text-[11px] text-slate-400">
+                        {selectedRegisteredUser?.email
+                          ? `✓ Tertaut ke akun terdaftar: ${selectedRegisteredUser.email}`
+                          : 'Tips: Isi email Google teman jika ingin struk langsung masuk ke Riwayat akunnya.'}
+                      </span>
+                      <button
+                        type="submit"
+                        className="min-h-[40px] px-5 py-2 rounded-full bg-[#00AED6] hover:bg-[#0099BD] active:scale-[0.98] text-white text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all whitespace-nowrap shrink-0"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Tambah Teman</span>
+                      </button>
+                    </div>
                   </form>
+
+                  {/* Quick-Add Registered Users & Previous Friends Strip */}
+                  {filteredUserSuggestions.length > 0 && (
+                    <div className="mt-3 p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
+                          <Search className="w-3 h-3 text-[#00AED6]" />
+                          <span>
+                            Pilih Cepat Akun Terdaftar / Teman Sebelumnya (Ketuk untuk tambah):
+                          </span>
+                        </span>
+                        {showUserSuggestions && (
+                          <button
+                            type="button"
+                            onClick={() => setShowUserSuggestions(false)}
+                            className="text-[11px] text-slate-400 hover:text-slate-600"
+                          >
+                            Tutup
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {filteredUserSuggestions.map((u) => (
+                          <button
+                            key={u.email || u.uid || u.displayName}
+                            type="button"
+                            onClick={() => handleQuickAddRegisteredUser(u)}
+                            className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-[#00AED6]/5 border border-slate-200 hover:border-[#00AED6] text-left inline-flex items-center gap-2 transition-all shadow-2xs"
+                          >
+                            {u.photoURL ? (
+                              <img
+                                src={u.photoURL}
+                                alt={u.displayName}
+                                referrerPolicy="no-referrer"
+                                className="w-5 h-5 rounded-full object-cover shrink-0"
+                              />
+                            ) : (
+                              <span className="w-5 h-5 rounded-full bg-slate-900 text-white text-[9px] font-bold flex items-center justify-center shrink-0">
+                                {getInitials(u.displayName)}
+                              </span>
+                            )}
+                            <div className="min-w-0">
+                              <div className="text-[11px] font-bold text-slate-900 leading-tight flex items-center gap-1">
+                                <span>{u.displayName}</span>
+                                {u.email && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Akun Terdaftar" />
+                                )}
+                              </div>
+                              {u.email && (
+                                <div className="text-[10px] text-slate-400 leading-tight truncate max-w-[160px]">
+                                  {u.email}
+                                </div>
+                              )}
+                            </div>
+                            <Plus className="w-3 h-3 text-slate-400 shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Horizontal Circular Avatar Strip + List */}
                   {activeBill.participants.length === 0 ? (
                     <div className="mt-4 p-5 rounded-2xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
-                      Belum ada anggota patungan. Ketik nama teman di atas lalu ketuk Tambah Teman.
+                      Belum ada anggota patungan. Ketik nama teman atau pilih akun terdaftar di atas.
                     </div>
                   ) : (
                     <div className="mt-4 space-y-3.5">
@@ -1362,13 +2029,22 @@ export default function App() {
                               className="flex flex-col items-center shrink-0 relative"
                             >
                               <div className="relative">
-                                <div
-                                  className={`w-11 h-11 rounded-full flex items-center justify-center font-extrabold text-xs shadow-2xs ${getAvatarColor(
-                                    idx
-                                  )}`}
-                                >
-                                  {getInitials(p.name)}
-                                </div>
+                                {p.photoURL ? (
+                                  <img
+                                    src={p.photoURL}
+                                    alt={p.name}
+                                    referrerPolicy="no-referrer"
+                                    className="w-11 h-11 rounded-full object-cover border border-slate-200 shadow-2xs"
+                                  />
+                                ) : (
+                                  <div
+                                    className={`w-11 h-11 rounded-full flex items-center justify-center font-extrabold text-xs shadow-2xs ${getAvatarColor(
+                                      idx
+                                    )}`}
+                                  >
+                                    {getInitials(p.name)}
+                                  </div>
+                                )}
                                 {isPaid && (
                                   <span
                                     className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#00880D] border-2 border-white text-white flex items-center justify-center"
@@ -1406,16 +2082,33 @@ export default function App() {
                               className="p-3 bg-white flex items-center justify-between gap-2"
                             >
                               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                <div
-                                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${getAvatarColor(
-                                    idx
-                                  )}`}
-                                >
-                                  {getInitials(p.name)}
-                                </div>
+                                {p.photoURL ? (
+                                  <img
+                                    src={p.photoURL}
+                                    alt={p.name}
+                                    referrerPolicy="no-referrer"
+                                    className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
+                                  />
+                                ) : (
+                                  <div
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${getAvatarColor(
+                                      idx
+                                    )}`}
+                                  >
+                                    {getInitials(p.name)}
+                                  </div>
+                                )}
                                 <div className="min-w-0">
-                                  <div className="text-xs font-bold text-slate-900 truncate">
-                                    {p.name}
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-xs font-bold text-slate-900 truncate">
+                                      {p.name}
+                                    </span>
+                                    {p.email && (
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-medium truncate max-w-[180px]">
+                                        <Mail className="w-2.5 h-2.5 text-[#00AED6] shrink-0" />
+                                        <span className="truncate">{p.email}</span>
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="text-[11px] text-slate-500 truncate">
                                     Total:{' '}
@@ -2540,41 +3233,58 @@ export default function App() {
       {/* Fixed Bottom Thumb-Zone Navigation Bar for Mobile & Tablet (< lg) */}
       <nav
         aria-label="Navigasi Utama Mobile"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 grid grid-cols-4 items-center h-16 px-2"
+        className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 grid ${
+          canEditActiveBill ? 'grid-cols-4' : 'grid-cols-3'
+        } items-center h-16 px-2`}
       >
-        <button
-          type="button"
-          onClick={() => {
-            setViewMode('editor');
-            setMobileEditorTab('input');
-          }}
-          className={`min-h-[48px] flex flex-col items-center justify-center rounded-xl transition-colors ${
-            viewMode === 'editor' && mobileEditorTab === 'input'
-              ? 'text-[#00AED6] font-extrabold'
-              : 'text-slate-500 font-medium'
-          }`}
-        >
-          <Receipt className="w-5 h-5" />
-          <span className="text-[10px] tracking-tight mt-0.5">Isi Struk</span>
-        </button>
+        {canEditActiveBill ? (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('editor');
+                setMobileEditorTab('input');
+              }}
+              className={`min-h-[48px] flex flex-col items-center justify-center rounded-xl transition-colors ${
+                viewMode === 'editor' && mobileEditorTab === 'input'
+                  ? 'text-[#00AED6] font-extrabold'
+                  : 'text-slate-500 font-medium'
+              }`}
+            >
+              <Receipt className="w-5 h-5" />
+              <span className="text-[10px] tracking-tight mt-0.5">Isi Struk</span>
+            </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            setViewMode('editor');
-            setMobileEditorTab('summary');
-          }}
-          className={`min-h-[48px] flex flex-col items-center justify-center rounded-xl transition-colors ${
-            viewMode === 'editor' && mobileEditorTab === 'summary'
-              ? 'text-[#00AED6] font-extrabold'
-              : 'text-slate-500 font-medium'
-          }`}
-        >
-          <Wallet className="w-5 h-5" />
-          <span className="text-[10px] tracking-tight mt-0.5">
-            Rincian & QRIS
-          </span>
-        </button>
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('editor');
+                setMobileEditorTab('summary');
+              }}
+              className={`min-h-[48px] flex flex-col items-center justify-center rounded-xl transition-colors ${
+                viewMode === 'editor' && mobileEditorTab === 'summary'
+                  ? 'text-[#00AED6] font-extrabold'
+                  : 'text-slate-500 font-medium'
+              }`}
+            >
+              <Wallet className="w-5 h-5" />
+              <span className="text-[10px] tracking-tight mt-0.5">
+                Rincian & QRIS
+              </span>
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={handleCreateNewBill}
+            className="min-h-[48px] flex flex-col items-center justify-center rounded-xl text-slate-500 font-medium transition-colors"
+          >
+            <FilePlus2 className="w-5 h-5" />
+            <span className="text-[10px] tracking-tight mt-0.5">
+              Buat Struk Sendiri
+            </span>
+          </button>
+        )}
 
         <button
           type="button"
@@ -2594,7 +3304,10 @@ export default function App() {
 
         <button
           type="button"
-          onClick={() => setViewMode('saved')}
+          onClick={() => {
+            syncBillsFromServer(currentUser);
+            setViewMode('saved');
+          }}
           className={`min-h-[48px] flex flex-col items-center justify-center rounded-xl transition-colors ${
             viewMode === 'saved'
               ? 'text-[#00AED6] font-extrabold'

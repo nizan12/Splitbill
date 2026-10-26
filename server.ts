@@ -14,7 +14,6 @@ app.use(express.json({ limit: "15mb" }));
 
 // Mount API routes
 app.use("/api", apiRouter);
-app.use("/", apiRouter);
 
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
