@@ -3127,30 +3127,23 @@ export default function App() {
                                 <div className="text-base sm:text-lg font-extrabold font-mono tabular-nums text-slate-900">
                                   {formatRupiah(b.finalTotal)}
                                 </div>
-                                <div className="hidden sm:block text-[11px] font-mono tabular-nums text-slate-400">
-                                  Menu {formatRupiah(b.subtotal)}
-                                  {b.taxShare > 0
-                                    ? ` + Pajak ${formatRupiah(b.taxShare)}`
-                                    : ''}
-                                  {b.travelShare > 0
-                                    ? ` + Jalan ${formatRupiah(b.travelShare)}`
-                                    : ''}
-                                </div>
                               </div>
                             </div>
 
                             {(b.taxShare > 0 || b.travelShare > 0) && (
-                              <div className="sm:hidden mt-2 pt-2 border-t border-slate-100 text-[11px] font-mono tabular-nums text-slate-400 flex flex-wrap items-center justify-between gap-1">
-                                <span>Porsi:</span>
-                                <span>
-                                  Menu {formatRupiah(b.subtotal)}
-                                  {b.taxShare > 0
-                                    ? ` + Pajak ${formatRupiah(b.taxShare)}`
-                                    : ''}
-                                  {b.travelShare > 0
-                                    ? ` + Jalan ${formatRupiah(b.travelShare)}`
-                                    : ''}
-                                </span>
+                              <div className="mt-2 pt-2 border-t border-slate-100 text-[11px] font-mono tabular-nums text-slate-400 flex flex-wrap items-center justify-between gap-1">
+                                <span className="text-slate-500 font-medium">Porsi:</span>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span>Menu {formatRupiah(b.subtotal)}</span>
+                                  {b.taxShare > 0 && (
+                                    <span>+ Pajak {formatRupiah(b.taxShare)}</span>
+                                  )}
+                                  {b.travelShare > 0 && (
+                                    <span className="text-[#00AED6] font-semibold">
+                                      + Jalan {formatRupiah(b.travelShare)}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             )}
 
