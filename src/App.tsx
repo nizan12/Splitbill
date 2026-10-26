@@ -3086,7 +3086,7 @@ export default function App() {
                             key={b.participant.id}
                             className="p-3.5 sm:p-4 rounded-2xl border border-slate-200 hover:border-[#00AED6] transition-colors bg-white"
                           >
-                            <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start justify-between gap-3">
                               <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                 <div
                                   className={`w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-xs shrink-0 ${getAvatarColor(
@@ -3099,7 +3099,7 @@ export default function App() {
                                   <div className="text-sm font-extrabold text-slate-900 truncate">
                                     {b.participant.name}
                                   </div>
-                                  <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5">
+                                  <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5 mt-0.5">
                                     <span>{b.items.length} menu</span>
                                     {b.travelItems.length > 0 && (
                                       <>
@@ -3124,10 +3124,10 @@ export default function App() {
                               </div>
 
                               <div className="text-right shrink-0">
-                                <div className="text-base font-extrabold font-mono tabular-nums text-slate-900">
+                                <div className="text-base sm:text-lg font-extrabold font-mono tabular-nums text-slate-900">
                                   {formatRupiah(b.finalTotal)}
                                 </div>
-                                <div className="text-[11px] font-mono tabular-nums text-slate-400">
+                                <div className="hidden sm:block text-[11px] font-mono tabular-nums text-slate-400">
                                   Menu {formatRupiah(b.subtotal)}
                                   {b.taxShare > 0
                                     ? ` + Pajak ${formatRupiah(b.taxShare)}`
@@ -3138,6 +3138,21 @@ export default function App() {
                                 </div>
                               </div>
                             </div>
+
+                            {(b.taxShare > 0 || b.travelShare > 0) && (
+                              <div className="sm:hidden mt-2 pt-2 border-t border-slate-100 text-[11px] font-mono tabular-nums text-slate-400 flex flex-wrap items-center justify-between gap-1">
+                                <span>Porsi:</span>
+                                <span>
+                                  Menu {formatRupiah(b.subtotal)}
+                                  {b.taxShare > 0
+                                    ? ` + Pajak ${formatRupiah(b.taxShare)}`
+                                    : ''}
+                                  {b.travelShare > 0
+                                    ? ` + Jalan ${formatRupiah(b.travelShare)}`
+                                    : ''}
+                                </span>
+                              </div>
+                            )}
 
                             {(b.items.length > 0 ||
                               b.travelItems.length > 0 ||
