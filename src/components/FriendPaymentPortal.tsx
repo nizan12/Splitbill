@@ -14,6 +14,7 @@ import {
   FileCheck2,
   X,
   ListChecks,
+  Car,
 } from 'lucide-react';
 import {
   SplitBill,
@@ -608,6 +609,32 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                   </span>
                 </div>
               )}
+              {activeBreakdown.travelItems.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-dashed border-sky-200 space-y-1.5">
+                  <div className="text-[11px] font-bold text-[#00AED6] flex items-center gap-1">
+                    <Car className="w-3.5 h-3.5" />
+                    <span>Biaya Perjalanan (Di Luar Struk Makanan)</span>
+                  </div>
+                  {activeBreakdown.travelItems.map((tr) => (
+                    <div
+                      key={tr.id}
+                      className="flex items-center justify-between gap-2 text-slate-600"
+                    >
+                      <span className="min-w-0">
+                        + {tr.name}{' '}
+                        {tr.sharedWithCount > 1 && (
+                          <span className="text-slate-400 font-mono tabular-nums">
+                            ({formatRupiah(tr.totalAmount)} ÷ {tr.sharedWithCount} org)
+                          </span>
+                        )}
+                      </span>
+                      <span className="font-mono tabular-nums font-semibold text-slate-900 shrink-0">
+                        +{formatRupiah(tr.shareAmount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
               {useUniqueCode && (
                 <div className="flex items-center justify-between text-slate-600">
                   <span>Kode Unik Verifikasi Transfer</span>
@@ -787,8 +814,39 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                   </span>
                 </div>
               )}
+              {(bill.travelItems || []).length > 0 && (
+                <div className="pt-2 mt-1 border-t border-dashed border-sky-200 space-y-1.5">
+                  <div className="text-[11px] font-bold text-[#00AED6] flex items-center gap-1">
+                    <Car className="w-3.5 h-3.5" />
+                    <span>Biaya Perjalanan (Di Luar Struk Makanan)</span>
+                  </div>
+                  {(bill.travelItems || []).map((trip) => {
+                    const validIds = (trip.assignedTo || []).filter((id) =>
+                      bill.participants.some((p) => p.id === id)
+                    );
+                    const count = validIds.length || bill.participants.length || 1;
+                    return (
+                      <div key={trip.id} className="flex justify-between gap-2 text-slate-600">
+                        <span className="min-w-0">
+                          {trip.name}{' '}
+                          <span className="text-slate-400 font-mono tabular-nums">
+                            ({count} org · {formatRupiah(Math.round(trip.amount / count))}/org)
+                          </span>
+                        </span>
+                        <span className="font-mono tabular-nums shrink-0">
+                          +{formatRupiah(trip.amount)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               <div className="pt-2 border-t border-slate-100 flex justify-between text-sm font-extrabold text-slate-900">
-                <span>Total Bersih Seluruh Struk</span>
+                <span>
+                  {summary.computedTravel > 0
+                    ? 'Total Struk + Perjalanan'
+                    : 'Total Bersih Seluruh Struk'}
+                </span>
                 <span className="font-mono tabular-nums">
                   {formatRupiah(summary.grandTotal)}
                 </span>

@@ -209,7 +209,8 @@ apiRouter.get("/bills", (req, res) => {
         if (!bill || !bill.id) return false;
         const hasTitle = Boolean(String(bill.title || "").trim());
         const hasItems = Array.isArray(bill.items) && bill.items.length > 0;
-        if (!hasTitle && !hasItems) return false;
+        const hasTravel = Array.isArray(bill.travelItems) && bill.travelItems.length > 0;
+        if (!hasTitle && !hasItems && !hasTravel) return false;
 
         if (idSet.has(bill.id)) return true;
         if (userId && bill.ownerId === userId) return true;
@@ -230,7 +231,8 @@ apiRouter.get("/bills", (req, res) => {
         if (!bill || !bill.id) return false;
         const hasTitle = Boolean(String(bill.title || "").trim());
         const hasItems = Array.isArray(bill.items) && bill.items.length > 0;
-        return hasTitle || hasItems;
+        const hasTravel = Array.isArray(bill.travelItems) && bill.travelItems.length > 0;
+        return hasTitle || hasItems || hasTravel;
       });
     }
 

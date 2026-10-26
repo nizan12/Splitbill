@@ -21,11 +21,13 @@ import {
   UserCheck,
   Mail,
   Search,
+  Car,
 } from 'lucide-react';
 import {
   SplitBill,
   Participant,
   BillItem,
+  TravelExpenseItem,
   PaymentChannel,
   PaymentStatus,
   RegisteredUser,
@@ -90,7 +92,9 @@ function isBillMeaningful(bill: SplitBill | null | undefined): boolean {
   if (!bill || !bill.id) return false;
   const hasTitle = Boolean(bill.title && bill.title.trim().length > 0);
   const hasItems = Array.isArray(bill.items) && bill.items.length > 0;
-  return hasTitle || hasItems;
+  const hasTravel =
+    Array.isArray(bill.travelItems) && bill.travelItems.length > 0;
+  return hasTitle || hasItems || hasTravel;
 }
 
 function getVisitedBillIds(): string[] {
@@ -274,6 +278,8 @@ export default function App() {
   const [newItemName, setNewItemName] = useState('');
   const [newItemQty, setNewItemQty] = useState<number>(1);
   const [newItemPrice, setNewItemPrice] = useState<string>('');
+  const [newTravelName, setNewTravelName] = useState('');
+  const [newTravelAmount, setNewTravelAmount] = useState<string>('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // New Payment Channel inputs
@@ -535,6 +541,7 @@ export default function App() {
     const hasContent =
       Boolean(activeBill.title.trim()) ||
       activeBill.items.length > 0 ||
+      (activeBill.travelItems && activeBill.travelItems.length > 0) ||
       summary.grandTotal > 0;
 
     if (!hasContent) return;
@@ -628,12 +635,24 @@ export default function App() {
       )
       .join('\n');
 
+    const travelLines = (calc.travelItems || [])
+      .map(
+        (tr) =>
+          `- 🚗 ${tr.name}${
+            tr.sharedWithCount > 1
+              ? ` (${formatRupiah(tr.totalAmount)} ÷ ${tr.sharedWithCount} org)`
+              : ''
+          }: ${formatRupiah(tr.shareAmount)}`
+      )
+      .join('\n');
+
     const extraLines = [
       calc.taxShare > 0 ||
       calc.serviceShare > 0 ||
       calc.deliveryShare > 0 ||
+      calc.travelShare > 0 ||
       calc.discountShare > 0
-        ? `Subtotal Pesanan: ${formatRupiah(calc.subtotal)}`
+        ? `Subtotal Pesanan Makanan: ${formatRupiah(calc.subtotal)}`
         : '',
       calc.taxShare > 0 ? `+ Pajak (PB1/PPN): +${formatRupiah(calc.taxShare)}` : '',
       calc.serviceShare > 0
@@ -641,6 +660,9 @@ export default function App() {
         : '',
       calc.deliveryShare > 0
         ? `+ Ongkir / Kemasan: +${formatRupiah(calc.deliveryShare)}`
+        : '',
+      calc.travelShare > 0
+        ? `+ Total Patungan Perjalanan: +${formatRupiah(calc.travelShare)}`
         : '',
       calc.discountShare > 0
         ? `- Diskon / Promo: -${formatRupiah(calc.discountShare)}`
@@ -655,6 +677,7 @@ export default function App() {
       }* (${activeBill.date}):`,
       '',
       itemLines,
+      travelLines ? `\n*Biaya Perjalanan (Di Luar Struk):*\n${travelLines}` : '',
       extraLines,
       `Total Bagian Kamu: *${formatRupiah(calc.finalTotal)}*`,
       channel
@@ -882,6 +905,10 @@ export default function App() {
         ...item,
         assignedTo: item.assignedTo.filter((id) => id !== participantId),
       })),
+      travelItems: (prev.travelItems || []).map((t) => ({
+        ...t,
+        assignedTo: (t.assignedTo || []).filter((id) => id !== participantId),
+      })),
     }));
   };
 
@@ -998,6 +1025,79 @@ export default function App() {
     setActiveBill((prev) => ({
       ...prev,
       items: prev.items.filter((it) => it.id !== itemId),
+    }));
+  };
+
+  // Add Travel / Transport Expense Item (Separate from Food Receipt & PB1 Tax)
+  const handleAddTravelItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newTravelName.trim();
+    const amount = Number(newTravelAmount.replace(/[^0-9]/g, ''));
+    if (!name || isNaN(amount) || amount <= 0) return;
+
+    const newTrip: TravelExpenseItem = {
+      id: 'tr-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      name,
+      amount,
+      assignedTo: activeBill.participants.map((p) => p.id),
+    };
+
+    setActiveBill((prev) => ({
+      ...prev,
+      travelItems: [...(prev.travelItems || []), newTrip],
+    }));
+    setNewTravelName('');
+    setNewTravelAmount('');
+  };
+
+  const handleToggleTravelAssignee = (travelId: string, participantId: string) => {
+    setActiveBill((prev) => ({
+      ...prev,
+      travelItems: (prev.travelItems || []).map((t) => {
+        if (t.id !== travelId) return t;
+        const exists = (t.assignedTo || []).includes(participantId);
+        const nextAssigned = exists
+          ? (t.assignedTo || []).filter((id) => id !== participantId)
+          : [...(t.assignedTo || []), participantId];
+        return {
+          ...t,
+          assignedTo: nextAssigned,
+        };
+      }),
+    }));
+  };
+
+  const handleAssignAllToTravelItem = (travelId: string) => {
+    const allIds = activeBill.participants.map((p) => p.id);
+    setActiveBill((prev) => ({
+      ...prev,
+      travelItems: (prev.travelItems || []).map((t) =>
+        t.id === travelId ? { ...t, assignedTo: allIds } : t
+      ),
+    }));
+  };
+
+  const handleRemoveTravelItem = (travelId: string) => {
+    setActiveBill((prev) => ({
+      ...prev,
+      travelItems: (prev.travelItems || []).filter((t) => t.id !== travelId),
+    }));
+  };
+
+  const handleMoveMenuItemToTravel = (item: BillItem) => {
+    const newTrip: TravelExpenseItem = {
+      id: 'tr-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      name: item.name,
+      amount: Math.max(0, item.qty) * Math.max(0, item.unitPrice),
+      assignedTo:
+        item.assignedTo && item.assignedTo.length > 0
+          ? item.assignedTo
+          : activeBill.participants.map((p) => p.id),
+    };
+    setActiveBill((prev) => ({
+      ...prev,
+      items: prev.items.filter((it) => it.id !== item.id),
+      travelItems: [...(prev.travelItems || []), newTrip],
     }));
   };
 
@@ -2272,7 +2372,7 @@ export default function App() {
                             key={item.id}
                             className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2.5"
                           >
-                            {/* Row 1: Item Name & Delete Button */}
+                            {/* Row 1: Item Name, Move to Travel, & Delete Button */}
                             <div className="flex items-center justify-between gap-2">
                               <input
                                 type="text"
@@ -2289,14 +2389,25 @@ export default function App() {
                                 }
                                 className="flex-1 min-w-0 bg-transparent text-sm font-extrabold text-slate-900 focus:bg-white focus:px-2 py-0.5 rounded-md focus:outline-none focus:ring-1 focus:ring-[#00AED6]"
                               />
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveItem(item.id)}
-                                className="min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-red-600 rounded-full transition-colors shrink-0"
-                                title="Hapus menu"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveMenuItemToTravel(item)}
+                                  className="min-h-[32px] px-2.5 py-1 rounded-full bg-white hover:bg-[#00AED6]/10 border border-slate-200 hover:border-[#00AED6]/40 text-[11px] font-bold text-slate-600 hover:text-[#00AED6] flex items-center gap-1 transition-colors"
+                                  title="Pindahkan item ini ke Patungan Biaya Perjalanan (di luar struk makanan)"
+                                >
+                                  <Car className="w-3 h-3" />
+                                  <span className="hidden sm:inline">Ke Perjalanan</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveItem(item.id)}
+                                  className="min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-red-600 rounded-full transition-colors shrink-0"
+                                  title="Hapus menu"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
 
                             {/* Row 2: Qty x UnitPrice & Line Total Before Split */}
@@ -2426,10 +2537,10 @@ export default function App() {
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
                       <div>
                         <h3 className="text-sm font-extrabold text-slate-900 font-display">
-                          Pajak, Layanan, Ongkir & Diskon
+                          Pajak, Layanan, Ongkir & Diskon Struk Makanan
                         </h3>
                         <p className="text-xs text-slate-500">
-                          Otomatis disertakan ke tagihan masing-masing teman
+                          Dihitung khusus dari menu struk makanan (tidak termasuk biaya perjalanan)
                         </p>
                       </div>
 
@@ -2638,7 +2749,7 @@ export default function App() {
                       {/* Delivery */}
                       <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50">
                         <label className="block text-xs font-bold text-slate-700 mb-2">
-                          Ongkir / Biaya Kemasan (Rp)
+                          Ongkir Makanan / Kemasan (Rp)
                         </label>
                         <input
                           type="number"
@@ -2681,21 +2792,256 @@ export default function App() {
                         />
                       </div>
                     </div>
+                  </div>
+                </section>
 
-                    {/* Mobile Next Step CTA Button */}
-                    <div className="lg:hidden mt-5">
+                {/* STEP 4: Dedicated Travel / Transport Split Card (Outside Food Receipt) */}
+                <section className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-2xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-dashed border-slate-200">
+                    <div>
+                      <h2 className="text-sm sm:text-base font-extrabold text-slate-900 font-display flex items-center gap-1.5">
+                        <Car className="w-4 h-4 text-[#00AED6] shrink-0" />
+                        <span>
+                          Patungan Biaya Perjalanan / Transportasi (
+                          {(activeBill.travelItems || []).length})
+                        </span>
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Terpisah dari struk makanan &amp; tidak ikut terkena perhitungan Pajak Resto (PB1/PPN)
+                      </p>
+                    </div>
+                    {summary.computedTravel > 0 && (
+                      <span className="px-2.5 py-1 rounded-full bg-[#00AED6]/10 text-[#00AED6] text-xs font-mono tabular-nums font-extrabold">
+                        Total: {formatRupiah(summary.computedTravel)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Quick Preset Chips for Common Transport */}
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-slate-400 mr-1">
+                      Isi cepat:
+                    </span>
+                    {[
+                      'Gojek Pergi',
+                      'Gojek Pulang',
+                      'GrabCar Pergi',
+                      'GrabCar Pulang',
+                      'Bensin & Tol',
+                      'Biaya Parkir',
+                    ].map((preset) => (
                       <button
+                        key={preset}
                         type="button"
-                        onClick={() => {
-                          setMobileEditorTab('summary');
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
-                        className="w-full min-h-[48px] py-3 px-5 rounded-full bg-[#00AED6] text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-xs active:scale-[0.98] transition-transform"
+                        onClick={() => setNewTravelName(preset)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors ${
+                          newTravelName === preset
+                            ? 'bg-[#00AED6] text-white border-[#00AED6]'
+                            : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'
+                        }`}
                       >
-                        <Wallet className="w-4 h-4" />
-                        <span>Lihat Rincian Tagihan Per Teman & QRIS</span>
+                        + {preset}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Add Travel Expense Form */}
+                  <form
+                    onSubmit={handleAddTravelItem}
+                    className="mt-3 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-12 sm:gap-2"
+                  >
+                    <input
+                      type="text"
+                      value={newTravelName}
+                      onChange={(e) => setNewTravelName(e.target.value)}
+                      placeholder="Rute / transportasi (cth: Gojek Pergi, Grab Pulang, Parkir)..."
+                      className="w-full sm:col-span-6 min-h-[44px] px-3.5 py-2 rounded-2xl border border-slate-300 text-xs font-medium text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                    />
+                    <div className="grid grid-cols-12 gap-2 sm:col-span-6">
+                      <input
+                        type="number"
+                        min={0}
+                        inputMode="numeric"
+                        value={newTravelAmount}
+                        onChange={(e) => setNewTravelAmount(e.target.value)}
+                        placeholder="Total biaya (Rp)"
+                        className="col-span-7 min-h-[44px] px-3 py-2 rounded-2xl border border-slate-300 text-xs font-mono text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                      />
+                      <button
+                        type="submit"
+                        className="col-span-5 min-h-[44px] px-3 py-2 rounded-full bg-[#00880D] hover:bg-[#00700B] active:scale-[0.98] text-white text-xs font-extrabold flex items-center justify-center gap-1 transition-all whitespace-nowrap"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Tambah</span>
                       </button>
                     </div>
+                  </form>
+
+                  {/* Travel Items List */}
+                  {!activeBill.travelItems || activeBill.travelItems.length === 0 ? (
+                    <div className="mt-4 p-4 rounded-2xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
+                      Belum ada biaya perjalanan. Tambahkan ongkos Gojek/Grab, bensin, tol, atau parkir di sini agar tidak tercampur dengan daftar menu makanan.
+                    </div>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {activeBill.travelItems.map((trip) => {
+                        const assignedCount = (trip.assignedTo || []).length;
+                        const perPersonShare =
+                          assignedCount > 0
+                            ? Math.round(trip.amount / assignedCount)
+                            : Math.round(
+                                trip.amount /
+                                  Math.max(1, activeBill.participants.length)
+                              );
+
+                        return (
+                          <div
+                            key={trip.id}
+                            className="p-3.5 rounded-2xl border border-sky-200/80 bg-sky-50/40 space-y-2.5"
+                          >
+                            {/* Row 1: Trip Name & Nominal + Delete */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                <Car className="w-4 h-4 text-[#00AED6] shrink-0" />
+                                <input
+                                  type="text"
+                                  value={trip.name}
+                                  onChange={(e) =>
+                                    setActiveBill((prev) => ({
+                                      ...prev,
+                                      travelItems: (prev.travelItems || []).map(
+                                        (t) =>
+                                          t.id === trip.id
+                                            ? { ...t, name: e.target.value }
+                                            : t
+                                      ),
+                                    }))
+                                  }
+                                  className="flex-1 min-w-0 bg-transparent text-sm font-extrabold text-slate-900 focus:bg-white focus:px-2 py-0.5 rounded-md focus:outline-none focus:ring-1 focus:ring-[#00AED6]"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  inputMode="numeric"
+                                  value={trip.amount}
+                                  onChange={(e) => {
+                                    const val = Math.max(
+                                      0,
+                                      Number(e.target.value) || 0
+                                    );
+                                    setActiveBill((prev) => ({
+                                      ...prev,
+                                      travelItems: (prev.travelItems || []).map(
+                                        (t) =>
+                                          t.id === trip.id
+                                            ? { ...t, amount: val }
+                                            : t
+                                      ),
+                                    }));
+                                  }}
+                                  className="w-28 min-h-[36px] px-2.5 py-1 rounded-xl border border-slate-300 bg-white text-xs font-mono tabular-nums font-bold text-right"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveTravelItem(trip.id)}
+                                  className="min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-red-600 rounded-full transition-colors shrink-0"
+                                  title="Hapus biaya perjalanan"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Row 2: Participant Assignment Bubbles for this Trip */}
+                            {activeBill.participants.length > 0 && (
+                              <div className="pt-2.5 border-t border-dashed border-sky-200/80 space-y-2">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleAssignAllToTravelItem(trip.id)
+                                    }
+                                    className={`min-h-[34px] px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                                      (trip.assignedTo || []).length ===
+                                      activeBill.participants.length
+                                        ? 'bg-[#00AED6] text-white'
+                                        : 'bg-white border border-slate-200 text-slate-600'
+                                    }`}
+                                  >
+                                    Semua Ikut
+                                  </button>
+                                  {activeBill.participants.map((p, idx) => {
+                                    const isSelected = (
+                                      trip.assignedTo || []
+                                    ).includes(p.id);
+                                    return (
+                                      <button
+                                        key={p.id}
+                                        type="button"
+                                        onClick={() =>
+                                          handleToggleTravelAssignee(
+                                            trip.id,
+                                            p.id
+                                          )
+                                        }
+                                        className={`min-h-[34px] pl-1.5 pr-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all active:scale-[0.97] ${
+                                          isSelected
+                                            ? 'bg-[#00880D] text-white shadow-2xs'
+                                            : 'bg-white border border-slate-200 text-slate-600 opacity-80'
+                                        }`}
+                                      >
+                                        <span
+                                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-extrabold ${
+                                            isSelected
+                                              ? 'bg-white text-[#00880D]'
+                                              : getAvatarColor(idx)
+                                          }`}
+                                        >
+                                          {isSelected
+                                            ? '✓'
+                                            : getInitials(p.name)}
+                                        </span>
+                                        <span>{p.name.split(' ')[0]}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+
+                                <div className="flex items-center justify-between text-[11px] text-slate-600 font-mono tabular-nums">
+                                  <span>
+                                    Patungan perjalanan{' '}
+                                    {assignedCount ||
+                                      activeBill.participants.length}{' '}
+                                    orang
+                                  </span>
+                                  <span className="font-bold text-[#00880D]">
+                                    {formatRupiah(perPersonShare)} / orang
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Mobile Next Step CTA Button */}
+                  <div className="lg:hidden mt-5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileEditorTab('summary');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="w-full min-h-[48px] py-3 px-5 rounded-full bg-[#00AED6] text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-xs active:scale-[0.98] transition-transform"
+                    >
+                      <Wallet className="w-4 h-4" />
+                      <span>Lihat Rincian Tagihan Per Teman & QRIS</span>
+                    </button>
                   </div>
                 </section>
               </div>
@@ -2714,7 +3060,7 @@ export default function App() {
                         Rincian Patungan Per Teman
                       </h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Termasuk harga menu sebelum bagi & pajak masing-masing
+                        Rincian menu makanan, pajak, dan patungan perjalanan terpisah
                       </p>
                     </div>
                     <span className="text-xs font-mono tabular-nums font-extrabold text-[#00880D]">
@@ -2753,8 +3099,16 @@ export default function App() {
                                   <div className="text-sm font-extrabold text-slate-900 truncate">
                                     {b.participant.name}
                                   </div>
-                                  <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                                  <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5">
                                     <span>{b.items.length} menu</span>
+                                    {b.travelItems.length > 0 && (
+                                      <>
+                                        <span aria-hidden="true">·</span>
+                                        <span className="text-[#00AED6] font-semibold">
+                                          {b.travelItems.length} perjalanan
+                                        </span>
+                                      </>
+                                    )}
                                     <span aria-hidden="true">·</span>
                                     {isPaid ? (
                                       <span className="text-[#00880D] font-bold">
@@ -2778,11 +3132,15 @@ export default function App() {
                                   {b.taxShare > 0
                                     ? ` + Pajak ${formatRupiah(b.taxShare)}`
                                     : ''}
+                                  {b.travelShare > 0
+                                    ? ` + Jalan ${formatRupiah(b.travelShare)}`
+                                    : ''}
                                 </div>
                               </div>
                             </div>
 
                             {(b.items.length > 0 ||
+                              b.travelItems.length > 0 ||
                               b.taxShare > 0 ||
                               b.serviceShare > 0 ||
                               b.deliveryShare > 0 ||
@@ -2811,17 +3169,20 @@ export default function App() {
                                 {(b.taxShare > 0 ||
                                   b.serviceShare > 0 ||
                                   b.deliveryShare > 0 ||
-                                  b.discountShare > 0) && (
+                                  b.discountShare > 0 ||
+                                  b.travelItems.length > 0) && (
                                   <div className="pt-1.5 mt-1.5 border-t border-slate-100 space-y-1">
-                                    <div className="flex items-center justify-between gap-2 text-slate-500">
-                                      <span>Subtotal Pesanan</span>
-                                      <span className="font-mono tabular-nums">
-                                        {formatRupiah(b.subtotal)}
-                                      </span>
-                                    </div>
+                                    {b.items.length > 0 && (
+                                      <div className="flex items-center justify-between gap-2 text-slate-500">
+                                        <span>Subtotal Pesanan Makanan</span>
+                                        <span className="font-mono tabular-nums">
+                                          {formatRupiah(b.subtotal)}
+                                        </span>
+                                      </div>
+                                    )}
                                     {b.taxShare > 0 && (
                                       <div className="flex items-center justify-between gap-2 text-slate-700 font-medium">
-                                        <span>+ Pajak (PB1 / PPN)</span>
+                                        <span>+ Pajak Resto (PB1 / PPN)</span>
                                         <span className="font-mono tabular-nums">
                                           +{formatRupiah(b.taxShare)}
                                         </span>
@@ -2849,6 +3210,34 @@ export default function App() {
                                         <span className="font-mono tabular-nums">
                                           -{formatRupiah(b.discountShare)}
                                         </span>
+                                      </div>
+                                    )}
+
+                                    {b.travelItems.length > 0 && (
+                                      <div className="pt-1.5 mt-1.5 border-t border-dashed border-sky-200/80 space-y-1">
+                                        <div className="text-[11px] font-bold text-[#00AED6] flex items-center gap-1">
+                                          <Car className="w-3 h-3" />
+                                          <span>Biaya Perjalanan (Di Luar Struk):</span>
+                                        </div>
+                                        {b.travelItems.map((tr) => (
+                                          <div
+                                            key={tr.id}
+                                            className="flex items-center justify-between gap-2 text-slate-700"
+                                          >
+                                            <span className="truncate">
+                                              {tr.name}{' '}
+                                              {tr.sharedWithCount > 1 && (
+                                                <span className="text-slate-400 font-mono tabular-nums">
+                                                  ({formatRupiah(tr.totalAmount)} ÷{' '}
+                                                  {tr.sharedWithCount} org)
+                                                </span>
+                                              )}
+                                            </span>
+                                            <span className="font-mono tabular-nums font-semibold shrink-0">
+                                              +{formatRupiah(tr.shareAmount)}
+                                            </span>
+                                          </div>
+                                        ))}
                                       </div>
                                     )}
                                   </div>

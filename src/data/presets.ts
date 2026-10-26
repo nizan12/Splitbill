@@ -23,5 +23,6 @@ export function createEmptyBill(): SplitBill {
     paymentChannels: [],
     participants: [],
     items: [],
+    travelItems: [],
   };
 }

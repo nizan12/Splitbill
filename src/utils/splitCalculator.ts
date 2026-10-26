@@ -3,6 +3,7 @@ import {
   BillCalculationSummary,
   ParticipantCalculation,
   ParticipantBreakdownItem,
+  ParticipantBreakdownTravelItem,
 } from '../types';
 
 export function formatRupiah(amount: number): string {
@@ -33,20 +34,32 @@ export function calculateSplitBill(bill: SplitBill): BillCalculationSummary {
     : Math.round(Math.max(0, bill.serviceAmount));
 
   const computedDelivery = Math.round(Math.max(0, bill.deliveryAmount || 0));
+  const computedTravel = Math.round(
+    (bill.travelItems || []).reduce((sum, t) => sum + Math.max(0, t.amount || 0), 0)
+  );
   const computedDiscount = Math.round(Math.max(0, bill.discountAmount || 0));
 
   const grandTotal = Math.max(
     0,
-    rawSubtotal + computedTax + computedService + computedDelivery - computedDiscount
+    rawSubtotal +
+      computedTax +
+      computedService +
+      computedDelivery +
+      computedTravel -
+      computedDiscount
   );
 
-  // Map each participant's subtotal and items
+  // Map each participant's subtotal, food items, and travel expenses
   const subtotalsMap: Record<string, number> = {};
   const itemsMap: Record<string, ParticipantBreakdownItem[]> = {};
+  const travelSubtotalsMap: Record<string, number> = {};
+  const travelItemsMap: Record<string, ParticipantBreakdownTravelItem[]> = {};
 
   participants.forEach((p) => {
     subtotalsMap[p.id] = 0;
     itemsMap[p.id] = [];
+    travelSubtotalsMap[p.id] = 0;
+    travelItemsMap[p.id] = [];
   });
 
   if (bill.mode === 'equal') {
@@ -59,24 +72,26 @@ export function calculateSplitBill(bill: SplitBill): BillCalculationSummary {
       const portions = Math.max(1, p.equalPortions || 1);
       const share = (rawSubtotal * portions) / Math.max(1, totalPortions);
       subtotalsMap[p.id] = share;
-      itemsMap[p.id] = [
-        {
-          itemId: 'equal-share',
-          name:
-            portions > 1
-              ? `Bagi Rata Tagihan (${portions} porsi)`
-              : 'Bagi Rata Tagihan',
-          totalQty: portions,
-          unitPrice: Math.round(rawSubtotal),
-          lineTotal: Math.round(rawSubtotal),
-          sharedWithCount: totalPortions,
-          sharedWithNames: allNames,
-          shareAmount: Math.round(share),
-        },
-      ];
+      if (rawSubtotal > 0) {
+        itemsMap[p.id] = [
+          {
+            itemId: 'equal-share',
+            name:
+              portions > 1
+                ? `Bagi Rata Tagihan (${portions} porsi)`
+                : 'Bagi Rata Tagihan',
+            totalQty: portions,
+            unitPrice: Math.round(rawSubtotal),
+            lineTotal: Math.round(rawSubtotal),
+            sharedWithCount: totalPortions,
+            sharedWithNames: allNames,
+            shareAmount: Math.round(share),
+          },
+        ];
+      }
     });
   } else {
-    // Itemized mode
+    // Itemized mode (Food / Receipt Menu)
     (bill.items || []).forEach((item) => {
       const lineTotal = Math.max(0, item.qty) * Math.max(0, item.unitPrice);
       const validAssigned = (item.assignedTo || []).filter((id) =>
@@ -107,6 +122,35 @@ export function calculateSplitBill(bill: SplitBill): BillCalculationSummary {
     });
   }
 
+  // Separate Travel / Transport Expense Calculation (never taxed by restaurant PB1/service)
+  (bill.travelItems || []).forEach((trip) => {
+    const tripTotal = Math.max(0, trip.amount || 0);
+    if (tripTotal <= 0) return;
+
+    const validAssigned = (trip.assignedTo || []).filter((id) =>
+      participants.some((p) => p.id === id)
+    );
+    const targetIds =
+      validAssigned.length > 0 ? validAssigned : participants.map((p) => p.id);
+    const sharedNames = targetIds
+      .map((id) => participants.find((p) => p.id === id)?.name || '')
+      .filter(Boolean);
+
+    const perPerson = tripTotal / Math.max(1, targetIds.length);
+    targetIds.forEach((pid) => {
+      travelSubtotalsMap[pid] = (travelSubtotalsMap[pid] || 0) + perPerson;
+      if (!travelItemsMap[pid]) travelItemsMap[pid] = [];
+      travelItemsMap[pid].push({
+        id: trip.id,
+        name: trip.name,
+        totalAmount: Math.round(tripTotal),
+        sharedWithCount: targetIds.length,
+        sharedWithNames: sharedNames,
+        shareAmount: Math.round(perPerson),
+      });
+    });
+  });
+
   const totalAssignedSubtotal = Object.values(subtotalsMap).reduce(
     (a, b) => a + b,
     0
@@ -115,12 +159,13 @@ export function calculateSplitBill(bill: SplitBill): BillCalculationSummary {
   const participantBreakdowns: ParticipantCalculation[] = participants.map(
     (p, idx) => {
       const pSubtotal = subtotalsMap[p.id] || 0;
+      const pTravel = travelSubtotalsMap[p.id] || 0;
       const ratio =
         bill.extraRule === 'proportional' && totalAssignedSubtotal > 0
           ? pSubtotal / totalAssignedSubtotal
           : 1 / participantCount;
 
-      // If a participant has 0 subtotal in itemized mode, they shouldn't pay tax/service unless extraRule is equal and everyone shares
+      // If a participant has 0 subtotal in itemized mode, they shouldn't pay restaurant tax/service unless extraRule is equal and everyone shares
       const activeRatio =
         bill.mode === 'itemized' && pSubtotal === 0 && totalAssignedSubtotal > 0
           ? 0
@@ -129,6 +174,7 @@ export function calculateSplitBill(bill: SplitBill): BillCalculationSummary {
       const taxShare = Math.round(computedTax * activeRatio);
       const serviceShare = Math.round(computedService * activeRatio);
       const deliveryShare = Math.round(computedDelivery * activeRatio);
+      const travelShare = Math.round(pTravel);
       const discountShare = Math.round(computedDiscount * activeRatio);
 
       const finalTotal = Math.max(
@@ -136,17 +182,20 @@ export function calculateSplitBill(bill: SplitBill): BillCalculationSummary {
         Math.round(pSubtotal) +
           taxShare +
           serviceShare +
-          deliveryShare -
+          deliveryShare +
+          travelShare -
           discountShare
       );
 
       return {
         participant: p,
         items: itemsMap[p.id] || [],
+        travelItems: travelItemsMap[p.id] || [],
         subtotal: Math.round(pSubtotal),
         taxShare,
         serviceShare,
         deliveryShare,
+        travelShare,
         discountShare,
         finalTotal,
         uniqueCode: 101 + ((idx + 1) * 17) % 890,
@@ -171,6 +220,7 @@ export function calculateSplitBill(bill: SplitBill): BillCalculationSummary {
     computedTax,
     computedService,
     computedDelivery,
+    computedTravel,
     computedDiscount,
     grandTotal,
     totalPaidAmount,
@@ -260,6 +310,12 @@ export function encodeBillToUrlParam(bill: SplitBill): string {
         it.unitPrice,
         it.assignedTo,
       ]),
+      tr: (bill.travelItems || []).map((t) => [
+        t.id,
+        t.name,
+        t.amount,
+        t.assignedTo,
+      ]),
     };
     const json = JSON.stringify(compact);
     const bytes = new TextEncoder().encode(json);
@@ -335,6 +391,14 @@ export function decodeBillFromUrlParam(encoded: string): SplitBill | null {
               qty: Number(it[2]) || 1,
               unitPrice: Number(it[3]) || 0,
               assignedTo: Array.isArray(it[4]) ? it[4] : [],
+            }))
+          : [],
+        travelItems: Array.isArray(parsed.tr)
+          ? parsed.tr.map((t: any) => ({
+              id: t[0] || `tr-${Math.random().toString(36).slice(2, 6)}`,
+              name: t[1] || 'Perjalanan',
+              amount: Number(t[2]) || 0,
+              assignedTo: Array.isArray(t[3]) ? t[3] : [],
             }))
           : [],
       };

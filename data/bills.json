@@ -1,50 +1,4 @@
 {
-  "sb-mvnqjub2": {
-    "id": "sb-mvnqjub2",
-    "title": "",
-    "category": "Makan & Minum",
-    "date": "2026-10-25",
-    "createdAt": "2026-10-25T11:19:40.334Z",
-    "mode": "itemized",
-    "extraRule": "proportional",
-    "taxPercent": 0,
-    "taxAmount": 0,
-    "useTaxPercent": true,
-    "servicePercent": 0,
-    "serviceAmount": 0,
-    "useServicePercent": true,
-    "deliveryAmount": 0,
-    "discountAmount": 0,
-    "notes": "",
-    "creatorName": "",
-    "paymentChannels": [],
-    "participants": [],
-    "items": [],
-    "updatedAt": "2026-10-25T11:46:16.736Z"
-  },
-  "sb-mvnrotx6": {
-    "id": "sb-mvnrotx6",
-    "title": "",
-    "category": "Makan & Minum",
-    "date": "2026-10-25",
-    "createdAt": "2026-10-25T11:51:32.730Z",
-    "mode": "itemized",
-    "extraRule": "proportional",
-    "taxPercent": 0,
-    "taxAmount": 0,
-    "useTaxPercent": true,
-    "servicePercent": 0,
-    "serviceAmount": 0,
-    "useServicePercent": true,
-    "deliveryAmount": 0,
-    "discountAmount": 0,
-    "notes": "",
-    "creatorName": "",
-    "paymentChannels": [],
-    "participants": [],
-    "items": [],
-    "updatedAt": "2026-10-25T11:51:33.741Z"
-  },
   "sb-mvol6hdb": {
     "id": "sb-mvol6hdb",
     "title": "JUSTEAK N MIE CEKBAN",
@@ -165,12 +119,13 @@
           "p-mvol75wd0ra",
           "p-mvol77hljip"
         ]
-      },
+      }
+    ],
+    "travelItems": [
       {
-        "id": "it-mvol80fvi49",
+        "id": "tr-mvol80fvi49",
         "name": "Gojek Pergi",
-        "qty": 1,
-        "unitPrice": 47500,
+        "amount": 47500,
         "assignedTo": [
           "p-mvol748wj1q",
           "p-mvol75wd0ra",
@@ -181,10 +136,9 @@
         ]
       },
       {
-        "id": "it-mvol863lt3f",
+        "id": "tr-mvol863lt3f",
         "name": "Gojek Balek",
-        "qty": 1,
-        "unitPrice": 44000,
+        "amount": 44000,
         "assignedTo": [
           "p-mvol748wj1q",
           "p-mvol75wd0ra",
@@ -197,38 +151,6 @@
     ],
     "ownerId": "Hp3BqW5uFrclYKXBHcnG860xJkj2",
     "ownerEmail": "nizan1258@gmail.com",
-    "updatedAt": "2026-10-26T02:26:34.950Z"
-  },
-  "sb-mvolwz90": {
-    "id": "sb-mvolwz90",
-    "title": "",
-    "category": "Makan & Minum",
-    "date": "2026-10-26",
-    "createdAt": "2026-10-26T01:57:41.364Z",
-    "mode": "itemized",
-    "extraRule": "proportional",
-    "taxPercent": 0,
-    "taxAmount": 0,
-    "useTaxPercent": true,
-    "servicePercent": 0,
-    "serviceAmount": 0,
-    "useServicePercent": true,
-    "deliveryAmount": 0,
-    "discountAmount": 0,
-    "notes": "",
-    "creatorName": "",
-    "paymentChannels": [],
-    "participants": [
-      {
-        "id": "p-mvolx6m8kvy",
-        "name": "Muhamad Sahrul Nizan",
-        "email": "nizan1258@gmail.com",
-        "userId": "Hp3BqW5uFrclYKXBHcnG860xJkj2",
-        "status": "unpaid",
-        "equalPortions": 1
-      }
-    ],
-    "items": [],
-    "updatedAt": "2026-10-26T01:57:51.478Z"
+    "updatedAt": "2026-10-26T13:35:00.000Z"
   }
 }

@@ -44,6 +44,13 @@ export interface BillItem {
   assignedTo: string[]; // Array of participant IDs
 }
 
+export interface TravelExpenseItem {
+  id: string;
+  name: string;
+  amount: number;
+  assignedTo: string[]; // Array of participant IDs sharing this trip
+}
+
 export interface PaymentChannel {
   id: string;
   provider: 'QRIS' | 'BCA' | 'Mandiri' | 'SeaBank' | 'BRI' | 'BNI' | 'OVO' | 'DANA' | 'ShopeePay';
@@ -79,6 +86,7 @@ export interface SplitBill {
   paymentChannels: PaymentChannel[];
   participants: Participant[];
   items: BillItem[];
+  travelItems?: TravelExpenseItem[];
 }
 
 export interface ParticipantBreakdownItem {
@@ -92,13 +100,24 @@ export interface ParticipantBreakdownItem {
   shareAmount: number;
 }
 
+export interface ParticipantBreakdownTravelItem {
+  id: string;
+  name: string;
+  totalAmount: number;
+  sharedWithCount: number;
+  sharedWithNames: string[];
+  shareAmount: number;
+}
+
 export interface ParticipantCalculation {
   participant: Participant;
   items: ParticipantBreakdownItem[];
+  travelItems: ParticipantBreakdownTravelItem[];
   subtotal: number;
   taxShare: number;
   serviceShare: number;
   deliveryShare: number;
+  travelShare: number;
   discountShare: number;
   finalTotal: number;
   uniqueCode: number;
@@ -109,6 +128,7 @@ export interface BillCalculationSummary {
   computedTax: number;
   computedService: number;
   computedDelivery: number;
+  computedTravel: number;
   computedDiscount: number;
   grandTotal: number;
   totalPaidAmount: number;
