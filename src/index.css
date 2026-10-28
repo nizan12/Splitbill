@@ -58,11 +58,11 @@
   position: absolute;
   top: -8%;
   left: 15%;
-  width: 480px;
-  height: 480px;
+  width: 520px;
+  height: 520px;
   border-radius: 9999px;
-  background: radial-gradient(circle, rgba(0, 174, 214, 0.16) 0%, rgba(0, 174, 214, 0) 70%);
-  filter: blur(60px);
+  background: radial-gradient(circle, rgba(0, 174, 214, 0.22) 0%, rgba(0, 174, 214, 0) 70%);
+  filter: blur(65px);
   animation: glassy-float 22s ease-in-out infinite alternate;
 }
 
@@ -70,11 +70,11 @@
   position: absolute;
   top: 35%;
   right: -5%;
-  width: 550px;
-  height: 550px;
+  width: 580px;
+  height: 580px;
   border-radius: 9999px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.13) 0%, rgba(99, 102, 241, 0) 70%);
-  filter: blur(70px);
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.18) 0%, rgba(99, 102, 241, 0) 70%);
+  filter: blur(75px);
   animation: glassy-float 28s ease-in-out infinite alternate-reverse;
 }
 
@@ -82,11 +82,11 @@
   position: absolute;
   bottom: 5%;
   left: 5%;
-  width: 520px;
-  height: 520px;
+  width: 540px;
+  height: 540px;
   border-radius: 9999px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.11) 0%, rgba(16, 185, 129, 0) 70%);
-  filter: blur(65px);
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.16) 0%, rgba(16, 185, 129, 0) 70%);
+  filter: blur(70px);
   animation: glassy-float 25s ease-in-out infinite alternate;
 }
 
@@ -94,11 +94,11 @@
   position: absolute;
   top: 70%;
   right: 25%;
-  width: 420px;
-  height: 420px;
+  width: 460px;
+  height: 460px;
   border-radius: 9999px;
-  background: radial-gradient(circle, rgba(244, 63, 94, 0.08) 0%, rgba(244, 63, 94, 0) 70%);
-  filter: blur(65px);
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.14) 0%, rgba(244, 63, 94, 0) 70%);
+  filter: blur(70px);
   animation: glassy-float 20s ease-in-out infinite alternate-reverse;
 }
 
@@ -410,18 +410,34 @@
 
 /* Glassy Floating Dock / Bottom Bar */
 .glass-dock {
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.82);
   background-image: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.5) 0%,
-    rgba(255, 255, 255, 0.1) 100%
+    rgba(255, 255, 255, 0.65) 0%,
+    rgba(255, 255, 255, 0.25) 100%
   );
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  backdrop-filter: blur(20px) saturate(160%);
-  border-top: 1px solid rgba(255, 255, 255, 0.75);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  backdrop-filter: blur(24px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
   box-shadow:
     inset 0 1.5px 0 0 rgba(255, 255, 255, 0.95),
-    0 -8px 24px -4px rgba(15, 23, 42, 0.06);
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.4),
+    0 16px 36px -6px rgba(15, 23, 42, 0.14),
+    0 4px 12px -2px rgba(0, 174, 214, 0.08);
+}
+
+.glass-dock-pill {
+  position: absolute !important;
+  inset: 2px !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-radius: 9999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  box-shadow:
+    0 4px 14px -2px rgba(0, 174, 214, 0.18),
+    0 1px 3px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Glassy Badge / Pill */

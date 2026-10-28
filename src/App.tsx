@@ -4050,9 +4050,10 @@ export default function App() {
       {/* GlassyUI Floating Bottom Dock Navigation Bar for Mobile & Tablet (< lg) */}
       <nav
         aria-label="Navigasi Utama Mobile"
-        className={`lg:hidden fixed bottom-3 left-3 right-3 sm:left-6 sm:right-6 max-w-lg mx-auto z-40 glass-dock rounded-3xl grid ${
+        className={`lg:hidden fixed bottom-3 left-3 right-3 sm:left-6 sm:right-6 max-w-md mx-auto z-50 glass-dock rounded-full grid ${
           canEditActiveBill ? 'grid-cols-4' : 'grid-cols-3'
-        } items-center h-16 px-2 shadow-2xl relative`}
+        } items-center h-[62px] p-1.5 shadow-2xl overflow-hidden`}
+        style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
       >
         {canEditActiveBill ? (
           <>
@@ -4062,22 +4063,32 @@ export default function App() {
                 setViewMode('editor');
                 setMobileEditorTab('input');
               }}
-              className={`relative min-h-[46px] flex flex-col items-center justify-center rounded-2xl transition-colors ${
-                viewMode === 'editor' && mobileEditorTab === 'input'
-                  ? 'font-extrabold text-slate-900'
-                  : 'text-slate-600 hover:text-slate-900 font-medium'
-              }`}
+              className="relative h-full flex flex-col items-center justify-center rounded-full transition-colors group"
             >
               {viewMode === 'editor' && mobileEditorTab === 'input' && (
                 <motion.div
                   layoutId="mobile-dock-pill"
-                  className="glass-tab-pill-white"
+                  className="glass-dock-pill"
                   transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
               )}
-              <span className="relative z-10 flex flex-col items-center">
-                <Receipt className="w-5 h-5 text-[#00AED6]" />
-                <span className="text-[10px] tracking-tight mt-0.5">Isi Struk</span>
+              <span className="relative z-10 flex flex-col items-center justify-center">
+                <Receipt
+                  className={`w-5 h-5 transition-all duration-200 ${
+                    viewMode === 'editor' && mobileEditorTab === 'input'
+                      ? 'text-[#00AED6] scale-105'
+                      : 'text-slate-400 group-hover:text-slate-600'
+                  }`}
+                />
+                <span
+                  className={`text-[10px] tracking-tight mt-0.5 transition-colors ${
+                    viewMode === 'editor' && mobileEditorTab === 'input'
+                      ? 'font-bold text-[#00AED6]'
+                      : 'font-medium text-slate-500 group-hover:text-slate-700'
+                  }`}
+                >
+                  Isi Struk
+                </span>
               </span>
             </button>
 
@@ -4087,22 +4098,30 @@ export default function App() {
                 setViewMode('editor');
                 setMobileEditorTab('summary');
               }}
-              className={`relative min-h-[46px] flex flex-col items-center justify-center rounded-2xl transition-colors ${
-                viewMode === 'editor' && mobileEditorTab === 'summary'
-                  ? 'font-extrabold text-slate-900'
-                  : 'text-slate-600 hover:text-slate-900 font-medium'
-              }`}
+              className="relative h-full flex flex-col items-center justify-center rounded-full transition-colors group"
             >
               {viewMode === 'editor' && mobileEditorTab === 'summary' && (
                 <motion.div
                   layoutId="mobile-dock-pill"
-                  className="glass-tab-pill-white"
+                  className="glass-dock-pill"
                   transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
               )}
-              <span className="relative z-10 flex flex-col items-center">
-                <Wallet className="w-5 h-5 text-[#00AED6]" />
-                <span className="text-[10px] tracking-tight mt-0.5">
+              <span className="relative z-10 flex flex-col items-center justify-center">
+                <Wallet
+                  className={`w-5 h-5 transition-all duration-200 ${
+                    viewMode === 'editor' && mobileEditorTab === 'summary'
+                      ? 'text-[#00AED6] scale-105'
+                      : 'text-slate-400 group-hover:text-slate-600'
+                  }`}
+                />
+                <span
+                  className={`text-[10px] tracking-tight mt-0.5 whitespace-nowrap transition-colors ${
+                    viewMode === 'editor' && mobileEditorTab === 'summary'
+                      ? 'font-bold text-[#00AED6]'
+                      : 'font-medium text-slate-500 group-hover:text-slate-700'
+                  }`}
+                >
                   Rincian & QRIS
                 </span>
               </span>
@@ -4112,12 +4131,12 @@ export default function App() {
           <button
             type="button"
             onClick={handleCreateNewBill}
-            className="relative min-h-[46px] flex flex-col items-center justify-center rounded-2xl text-slate-600 font-medium transition-colors"
+            className="relative h-full flex flex-col items-center justify-center rounded-full transition-colors group"
           >
-            <span className="relative z-10 flex flex-col items-center">
-              <FilePlus2 className="w-5 h-5 text-[#00AED6]" />
-              <span className="text-[10px] tracking-tight mt-0.5">
-                Buat Struk Sendiri
+            <span className="relative z-10 flex flex-col items-center justify-center">
+              <FilePlus2 className="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
+              <span className="text-[10px] tracking-tight mt-0.5 font-medium text-slate-500 group-hover:text-slate-700 whitespace-nowrap">
+                Buat Struk
               </span>
             </span>
           </button>
@@ -4129,22 +4148,32 @@ export default function App() {
             setPortalParticipantId(undefined);
             setViewMode('portal');
           }}
-          className={`relative min-h-[46px] flex flex-col items-center justify-center rounded-2xl transition-colors ${
-            viewMode === 'portal'
-              ? 'font-extrabold text-slate-900'
-              : 'text-slate-600 hover:text-slate-900 font-medium'
-          }`}
+          className="relative h-full flex flex-col items-center justify-center rounded-full transition-colors group"
         >
           {viewMode === 'portal' && (
             <motion.div
               layoutId="mobile-dock-pill"
-              className="glass-tab-pill-white"
+              className="glass-dock-pill"
               transition={{ type: 'spring', stiffness: 500, damping: 35 }}
             />
           )}
-          <span className="relative z-10 flex flex-col items-center">
-            <ExternalLink className="w-5 h-5 text-[#00880D]" />
-            <span className="text-[10px] tracking-tight mt-0.5">Link Bayar</span>
+          <span className="relative z-10 flex flex-col items-center justify-center">
+            <ExternalLink
+              className={`w-5 h-5 transition-all duration-200 ${
+                viewMode === 'portal'
+                  ? 'text-[#00880D] scale-105'
+                  : 'text-slate-400 group-hover:text-slate-600'
+              }`}
+            />
+            <span
+              className={`text-[10px] tracking-tight mt-0.5 transition-colors ${
+                viewMode === 'portal'
+                  ? 'font-bold text-[#00880D]'
+                  : 'font-medium text-slate-500 group-hover:text-slate-700'
+              }`}
+            >
+              Link Bayar
+            </span>
           </span>
         </button>
 
@@ -4154,22 +4183,32 @@ export default function App() {
             syncBillsFromServer(currentUser);
             setViewMode('saved');
           }}
-          className={`relative min-h-[46px] flex flex-col items-center justify-center rounded-2xl transition-colors ${
-            viewMode === 'saved'
-              ? 'font-extrabold text-slate-900'
-              : 'text-slate-600 hover:text-slate-900 font-medium'
-          }`}
+          className="relative h-full flex flex-col items-center justify-center rounded-full transition-colors group"
         >
           {viewMode === 'saved' && (
             <motion.div
               layoutId="mobile-dock-pill"
-              className="glass-tab-pill-white"
+              className="glass-dock-pill"
               transition={{ type: 'spring', stiffness: 500, damping: 35 }}
             />
           )}
-          <span className="relative z-10 flex flex-col items-center">
-            <History className="w-5 h-5 text-[#00AED6]" />
-            <span className="text-[10px] tracking-tight mt-0.5">Riwayat</span>
+          <span className="relative z-10 flex flex-col items-center justify-center">
+            <History
+              className={`w-5 h-5 transition-all duration-200 ${
+                viewMode === 'saved'
+                  ? 'text-[#00AED6] scale-105'
+                  : 'text-slate-400 group-hover:text-slate-600'
+              }`}
+            />
+            <span
+              className={`text-[10px] tracking-tight mt-0.5 transition-colors ${
+                viewMode === 'saved'
+                  ? 'font-bold text-[#00AED6]'
+                  : 'font-medium text-slate-500 group-hover:text-slate-700'
+              }`}
+            >
+              Riwayat
+            </span>
           </span>
         </button>
       </nav>
