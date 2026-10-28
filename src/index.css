@@ -183,91 +183,104 @@
     0 2px 6px rgba(15, 23, 42, 0.04);
 }
 
+:where(.glass-button-prominent > *, .glass-button-success > *, .glass-button-standard > *) {
+  position: relative;
+  z-index: 2;
+}
+
 /* Glassy Prominent Button (GlassyUI signature cyan/blue glass button) */
 .glass-button-prominent {
   position: relative;
-  background: linear-gradient(135deg, #00AED6 0%, #0099BD 100%);
+  background: linear-gradient(180deg, #0AC3EE 0%, #00AED6 35%, #0091B5 70%, #007594 100%);
   color: #FFFFFF;
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
-  backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  backdrop-filter: blur(14px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.38);
   box-shadow:
-    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1.5px 1px 0 rgba(0, 0, 0, 0.18),
-    inset 0 0 12px rgba(255, 255, 255, 0.18),
-    0 8px 24px -4px rgba(0, 174, 214, 0.42),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -1px 2px 0 rgba(0, 0, 0, 0.25),
+    inset 0 0 14px rgba(255, 255, 255, 0.18),
+    0 8px 24px -4px rgba(0, 174, 214, 0.45),
     0 2px 6px rgba(15, 23, 42, 0.08);
   transition: all 0.2s var(--lg-spring);
 }
 
 .glass-button-prominent:hover {
-  background: linear-gradient(135deg, #00B8E1 0%, #00A3C9 100%);
+  background: linear-gradient(180deg, #1BD3FC 0%, #00BDE8 35%, #00A1C8 70%, #0084A7 100%);
+  border-color: rgba(255, 255, 255, 0.55);
   box-shadow:
-    inset 0 2px 1.5px 0 rgba(255, 255, 255, 0.65),
-    inset 0 -1.5px 1px 0 rgba(0, 0, 0, 0.2),
-    0 12px 28px -4px rgba(0, 174, 214, 0.52),
-    0 4px 8px rgba(15, 23, 42, 0.1);
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 2px 0 rgba(0, 0, 0, 0.25),
+    inset 0 0 18px rgba(255, 255, 255, 0.25),
+    0 12px 28px -4px rgba(0, 174, 214, 0.55),
+    0 4px 10px rgba(15, 23, 42, 0.1);
   transform: translateY(-1px);
 }
 
 .glass-button-prominent:active {
   transform: scale(0.98);
   box-shadow:
-    inset 0 1px 1px 0 rgba(0, 0, 0, 0.2),
-    0 4px 12px rgba(0, 174, 214, 0.3);
+    inset 0 1px 2px 0 rgba(0, 0, 0, 0.25),
+    0 4px 12px rgba(0, 174, 214, 0.35);
 }
 
 /* Glassy Success Button (Lush Emerald glass) */
 .glass-button-success {
   position: relative;
-  background: linear-gradient(135deg, #00880D 0%, #00730B 100%);
+  background: linear-gradient(180deg, #05B315 0%, #00880D 35%, #006E0B 70%, #005608 100%);
   color: #FFFFFF;
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
-  backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  backdrop-filter: blur(14px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.38);
   box-shadow:
-    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1.5px 1px 0 rgba(0, 0, 0, 0.18),
-    inset 0 0 12px rgba(255, 255, 255, 0.18),
-    0 8px 24px -4px rgba(0, 136, 13, 0.4),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -1px 2px 0 rgba(0, 0, 0, 0.28),
+    inset 0 0 14px rgba(255, 255, 255, 0.18),
+    0 8px 22px -4px rgba(0, 136, 13, 0.42),
     0 2px 6px rgba(15, 23, 42, 0.08);
   transition: all 0.2s var(--lg-spring);
 }
 
 .glass-button-success:hover {
-  background: linear-gradient(135deg, #009B0F 0%, #00820D 100%);
+  background: linear-gradient(180deg, #07C918 0%, #009B0F 35%, #007D0C 70%, #00630A 100%);
+  border-color: rgba(255, 255, 255, 0.55);
   box-shadow:
-    inset 0 2px 1.5px 0 rgba(255, 255, 255, 0.65),
-    0 12px 28px -4px rgba(0, 136, 13, 0.5),
-    0 4px 8px rgba(15, 23, 42, 0.1);
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 2px 0 rgba(0, 0, 0, 0.28),
+    inset 0 0 18px rgba(255, 255, 255, 0.25),
+    0 12px 28px -4px rgba(0, 136, 13, 0.52),
+    0 4px 10px rgba(15, 23, 42, 0.1);
   transform: translateY(-1px);
 }
 
 .glass-button-success:active {
   transform: scale(0.98);
+  box-shadow:
+    inset 0 1px 2px 0 rgba(0, 0, 0, 0.25),
+    0 4px 12px rgba(0, 136, 13, 0.35);
 }
 
 /* Glassy Standard Button (Neutral Frosted Slab) */
 .glass-button-standard {
   position: relative;
-  background: rgba(255, 255, 255, 0.7);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.82) 40%, rgba(241, 245, 249, 0.75) 100%);
   color: #1E293B;
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-  backdrop-filter: blur(12px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   box-shadow:
-    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.95),
-    inset -1px -1px 0 0 rgba(255, 255, 255, 0.35),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -1px 1.5px 0 rgba(0, 0, 0, 0.05),
     0 4px 14px -3px rgba(15, 23, 42, 0.06),
     0 1px 2px rgba(15, 23, 42, 0.03);
   transition: all 0.2s var(--lg-spring);
 }
 
 .glass-button-standard:hover {
-  background: rgba(255, 255, 255, 0.92);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.9) 100%);
   border-color: rgba(255, 255, 255, 1);
   box-shadow:
-    inset 0 1.5px 0 0 rgba(255, 255, 255, 1),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 1),
     0 8px 20px -4px rgba(15, 23, 42, 0.09),
     0 2px 4px rgba(15, 23, 42, 0.04);
   transform: translateY(-1px);

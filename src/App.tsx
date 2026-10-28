@@ -2677,7 +2677,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setIsScannerOpen(true)}
-                      className="min-h-[38px] px-3.5 py-1.5 rounded-full glass-button-prominent text-xs font-extrabold flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 shadow-sm"
+                      className="min-h-[38px] px-3.5 py-1.5 rounded-full glass-button-prominent text-xs font-extrabold flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       <span>Scan Foto</span>
@@ -2718,7 +2718,7 @@ export default function App() {
                       />
                       <button
                         type="submit"
-                        className="col-span-4 min-h-[44px] px-3 py-2 rounded-full glass-button-success text-xs font-extrabold flex items-center justify-center gap-1 transition-all whitespace-nowrap shadow-sm"
+                        className="col-span-4 min-h-[44px] px-3 py-2 rounded-full glass-button-success text-xs font-extrabold flex items-center justify-center gap-1 transition-all whitespace-nowrap"
                       >
                         <Plus className="w-4 h-4" />
                         <span>Tambah</span>
