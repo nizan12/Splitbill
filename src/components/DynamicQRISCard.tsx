@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import {
   Download,
   Copy,
@@ -132,9 +133,9 @@ export const DynamicQRISCard: React.FC<DynamicQRISCardProps> = ({
   const isDynamicMode = activeTab === 'dynamic' && Boolean(dynamicQrUrl);
 
   return (
-    <div className="mt-4 rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-[0_2px_12px_-4px_rgba(15,23,42,0.06)]">
+    <div className="mt-4 rounded-2xl glass-card overflow-hidden shadow-md">
       {/* Top Bar: Official-style QRIS Mark & Mode Switcher */}
-      <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between gap-2">
+      <div className="px-4 py-3 bg-white/40 border-b border-white/50 backdrop-blur-xs flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {/* Crisp Typographic QRIS Badge */}
           <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-900 text-white select-none">
@@ -143,35 +144,49 @@ export const DynamicQRISCard: React.FC<DynamicQRISCardProps> = ({
             </span>
             <span className="w-1 h-1 rounded-full bg-rose-500" />
           </div>
-          <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
+          <span className="text-[11px] font-medium text-slate-500 hidden sm:inline">
             Standar Pembayaran Nasional
           </span>
         </div>
 
-        {/* Clean Segmented Control */}
+        {/* Clean Segmented Control with Smooth Sliding Pill */}
         {dynamicQrUrl && customQrisUrl && (
-          <div className="inline-flex p-0.5 rounded-lg bg-slate-200/70 text-[11px] font-semibold">
+          <div className="glass-tabs-track p-0.5 rounded-lg text-[11px] font-semibold inline-flex relative">
             <button
               type="button"
               onClick={() => setActiveTab('dynamic')}
-              className={`px-2.5 py-1 rounded-md transition-all ${
+              className={`relative px-2.5 py-1 rounded-md transition-colors ${
                 activeTab === 'dynamic'
-                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? 'text-slate-900 font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Otomatis
+              {activeTab === 'dynamic' && (
+                <motion.div
+                  layoutId="qris-mode-pill"
+                  className="glass-tab-pill-white"
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+              <span className="relative z-10">Otomatis</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('static')}
-              className={`px-2.5 py-1 rounded-md transition-all ${
+              className={`relative px-2.5 py-1 rounded-md transition-colors ${
                 activeTab === 'static'
-                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? 'text-slate-900 font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              QR Asli
+              {activeTab === 'static' && (
+                <motion.div
+                  layoutId="qris-mode-pill"
+                  className="glass-tab-pill-white"
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+              <span className="relative z-10">QR Asli</span>
             </button>
           </div>
         )}
@@ -194,14 +209,14 @@ export const DynamicQRISCard: React.FC<DynamicQRISCardProps> = ({
         {/* Clean QR Standee Frame */}
         <div className="my-4 flex flex-col items-center">
           {isProcessing ? (
-            <div className="w-full max-w-[240px] aspect-square flex flex-col items-center justify-center gap-2.5 bg-slate-50 rounded-2xl border border-slate-100">
+            <div className="w-full max-w-[240px] aspect-square flex flex-col items-center justify-center gap-2.5 bg-white/40 rounded-2xl border border-white/60">
               <RefreshCw className="w-5 h-5 text-slate-400 animate-spin" />
               <span className="text-xs text-slate-400 font-medium">
                 Memuat kode QR...
               </span>
             </div>
           ) : isDynamicMode && dynamicQrUrl ? (
-            <div className="relative p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-[0_4px_20px_-6px_rgba(15,23,42,0.08)]">
+            <div className="relative p-3.5 bg-white rounded-2xl border border-white/80 shadow-[0_4px_20px_-6px_rgba(15,23,42,0.08)]">
               {/* Subtle Corner Viewfinder Accents */}
               <div className="pointer-events-none absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-slate-300 rounded-tl-md" />
               <div className="pointer-events-none absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-slate-300 rounded-tr-md" />
@@ -215,7 +230,7 @@ export const DynamicQRISCard: React.FC<DynamicQRISCardProps> = ({
               />
             </div>
           ) : customQrisUrl ? (
-            <div className="p-3 bg-white rounded-2xl border border-slate-200/90 shadow-[0_4px_20px_-6px_rgba(15,23,42,0.08)]">
+            <div className="p-3 bg-white rounded-2xl border border-white/80 shadow-[0_4px_20px_-6px_rgba(15,23,42,0.08)]">
               <img
                 src={customQrisUrl}
                 alt={`QRIS ${merchantDisplayName}`}
@@ -224,14 +239,14 @@ export const DynamicQRISCard: React.FC<DynamicQRISCardProps> = ({
               />
             </div>
           ) : (
-            <div className="w-full py-8 px-4 rounded-2xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
+            <div className="w-full py-8 px-4 rounded-2xl border border-dashed border-white/60 bg-white/20 text-center text-xs text-slate-400">
               Pembuat Split Bill belum mengunggah gambar QRIS.
             </div>
           )}
         </div>
 
         {/* Amount Summary Box (Tactile Receipt Strip) */}
-        <div className="rounded-xl bg-slate-50 border border-slate-200/70 px-3.5 py-3 flex items-center justify-between gap-3">
+        <div className="rounded-xl bg-white/60 border border-white/70 px-3.5 py-3 flex items-center justify-between gap-3 backdrop-blur-xs">
           <div className="text-left min-w-0">
             <div className="flex items-center gap-1.5">
               <span
@@ -253,7 +268,7 @@ export const DynamicQRISCard: React.FC<DynamicQRISCardProps> = ({
           <button
             type="button"
             onClick={() => onCopy(String(transferAmount), 'qris-nominal')}
-            className="shrink-0 h-8 px-3 rounded-lg bg-white hover:bg-slate-100 border border-slate-200/90 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors shadow-2xs"
+            className="glass-button-standard shrink-0 h-8 px-3 rounded-lg text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5"
           >
             {copiedField === 'qris-nominal' ? (
               <>
@@ -275,7 +290,7 @@ export const DynamicQRISCard: React.FC<DynamicQRISCardProps> = ({
             <a
               href={dynamicQrUrl}
               download={downloadFilename}
-              className="flex-1 h-10 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold inline-flex items-center justify-center gap-2 transition-colors"
+              className="glass-button-prominent flex-1 h-10 px-4 rounded-xl text-white text-xs font-bold inline-flex items-center justify-center gap-2"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Simpan Gambar QR</span>
@@ -284,7 +299,7 @@ export const DynamicQRISCard: React.FC<DynamicQRISCardProps> = ({
             <a
               href={customQrisUrl}
               download={`QRIS-${merchantDisplayName.replace(/\s+/g, '-')}.jpg`}
-              className="flex-1 h-10 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold inline-flex items-center justify-center gap-2 transition-colors"
+              className="glass-button-prominent flex-1 h-10 px-4 rounded-xl text-white text-xs font-bold inline-flex items-center justify-center gap-2"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Simpan Gambar QR</span>
@@ -295,7 +310,7 @@ export const DynamicQRISCard: React.FC<DynamicQRISCardProps> = ({
             <button
               type="button"
               onClick={() => onCopy(dynamicQrisString, 'qris-string')}
-              className="h-10 px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors shrink-0"
+              className="glass-button-standard h-10 px-3.5 rounded-xl text-slate-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 shrink-0"
               title="Salin kode mentah QRIS"
             >
               {copiedField === 'qris-string' ? (

@@ -124,17 +124,17 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto">
-      <div className="bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-xl max-h-[92vh] overflow-y-auto">
-        <div className="w-10 h-1.5 bg-slate-200 rounded-full mx-auto mb-3 sm:hidden" />
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-md p-0 sm:p-4 overflow-y-auto">
+      <div className="glass-modal rounded-t-3xl sm:rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
+        <div className="w-10 h-1.5 bg-slate-300/80 rounded-full mx-auto mb-3 sm:hidden" />
         
-        <div className="flex items-center justify-between pb-3.5 border-b border-slate-200">
+        <div className="flex items-center justify-between pb-3.5 border-b border-white/40">
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base sm:text-lg font-extrabold text-slate-900 font-display">
                 Bagikan Link Pembayaran
               </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#00880D]/10 text-[#00880D] flex items-center gap-1">
+              <span className="glass-badge px-2 py-0.5 rounded-full text-[10px] font-bold text-[#00880D] flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
                 Resmi Patungans
               </span>
@@ -146,7 +146,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded-full text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            className="glass-button-standard min-h-[38px] min-w-[38px] flex items-center justify-center rounded-full text-slate-500 hover:text-slate-800 transition-colors"
             aria-label="Tutup modal"
           >
             <X className="w-5 h-5" />
@@ -163,10 +163,10 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedParticipantId('all')}
-                className={`min-h-[36px] px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap ${
+                className={`min-h-[36px] px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
                   selectedParticipantId === 'all'
-                    ? 'bg-[#00AED6] text-white'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ? 'glass-button-prominent text-white'
+                    : 'glass-button-standard text-slate-700'
                 }`}
               >
                 Semua Teman (Link Grup)
@@ -176,10 +176,10 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                   key={b.participant.id}
                   type="button"
                   onClick={() => setSelectedParticipantId(b.participant.id)}
-                  className={`min-h-[36px] px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors max-w-full ${
+                  className={`min-h-[36px] px-3.5 py-1.5 rounded-full text-xs font-bold transition-all max-w-full ${
                     selectedParticipantId === b.participant.id
-                      ? 'bg-[#00880D] text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ? 'glass-button-success text-white'
+                      : 'glass-button-standard text-slate-700'
                   }`}
                   title={`Khusus ${b.participant.name} (${formatRupiah(b.finalTotal)})`}
                 >
@@ -192,7 +192,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
           </div>
 
           {/* Direct Link Box */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+          <div className="p-3.5 rounded-2xl glass-card">
             <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
               <span className="flex items-center gap-1.5 font-bold text-slate-700">
                 <Link2 className="w-3.5 h-3.5 text-[#00880D]" />
@@ -207,12 +207,12 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                 type="text"
                 readOnly
                 value={displayLink}
-                className="w-full min-h-[42px] px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-mono text-slate-700 focus:outline-none select-all"
+                className="glass-input w-full min-h-[42px] px-3 py-2 rounded-xl text-xs font-mono text-slate-700 focus:outline-none select-all"
               />
               <button
                 type="button"
                 onClick={() => handleCopy(displayLink, 'link')}
-                className="min-h-[42px] px-4 py-2 rounded-full bg-[#00880D] hover:bg-[#00700B] text-white text-xs font-extrabold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 shadow-xs active:scale-[0.98]"
+                className="glass-button-success min-h-[42px] px-4 py-2 rounded-full text-white text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap shrink-0 shadow-md active:scale-[0.98]"
               >
                 {copiedKey === 'link' ? (
                   <>
@@ -258,7 +258,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
               readOnly
               rows={7}
               value={generateChatMessage()}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs font-mono text-slate-700 focus:outline-none"
+              className="glass-input w-full rounded-2xl p-3 text-xs font-mono text-slate-700 focus:outline-none"
             />
           </div>
 
@@ -272,7 +272,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                   selectedParticipantId === 'all' ? undefined : selectedParticipantId
                 );
               }}
-              className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-full border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-bold flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
+              className="glass-button-standard w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-full text-slate-800 text-xs font-bold flex items-center justify-center gap-2 whitespace-nowrap"
             >
               <ExternalLink className="w-4 h-4" />
               Buka Tampilan Link Bayar
@@ -281,7 +281,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
             <button
               type="button"
               onClick={handleOpenWhatsApp}
-              className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-full bg-[#00880D] hover:bg-[#00700B] text-white text-xs font-extrabold flex items-center justify-center gap-2 transition-all whitespace-nowrap shadow-xs active:scale-[0.98]"
+              className="glass-button-success w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-full text-white text-xs font-extrabold flex items-center justify-center gap-2 whitespace-nowrap shadow-md active:scale-[0.98]"
             >
               <Send className="w-4 h-4" />
               Kirim ke WhatsApp

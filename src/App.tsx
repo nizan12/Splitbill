@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { motion } from 'motion/react';
 import {
   Plus,
   Trash2,
@@ -1494,10 +1495,18 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F1F5F9] text-[#0F172A] pb-24 lg:pb-10 overflow-x-hidden w-full max-w-full">
-      {/* Compact Sticky Top App Bar (3-Zone Contract, < 56px height on mobile) */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-8 h-14 flex items-center justify-between gap-4">
-        {/* Zone 1: Single text element wordmark */}
+    <div className="relative min-h-screen flex flex-col bg-[#F8FAFC] text-[#0F172A] pb-24 lg:pb-10 overflow-x-hidden w-full max-w-full" data-lg-theme="light">
+      {/* Ambient background light orbs that GlassyUI glass surfaces refract */}
+      <div className="glassy-ambient-bg" aria-hidden="true">
+        <div className="glassy-orb-1" />
+        <div className="glassy-orb-2" />
+        <div className="glassy-orb-3" />
+        <div className="glassy-orb-4" />
+      </div>
+
+      {/* Compact Sticky Top App Bar (GlassyUI Header Slab) */}
+      <header className="sticky top-0 z-30 glass-header px-4 sm:px-8 h-14 flex items-center justify-between gap-4">
+        {/* Zone 1: Single text element wordmark with GlassyUI glow */}
         <a
           href="#top"
           onClick={(e) => {
@@ -1509,32 +1518,42 @@ export default function App() {
               setViewMode('portal');
             }
           }}
-          className="text-base sm:text-lg font-extrabold tracking-tight text-[#00AED6] font-display whitespace-nowrap shrink-0"
+          className="text-base sm:text-lg font-black tracking-tight text-[#00AED6] font-display whitespace-nowrap shrink-0 flex items-center gap-2 group"
         >
-          Patungans
+          <span className="w-7 h-7 rounded-xl bg-gradient-to-tr from-[#00AED6] to-[#0093B8] text-white flex items-center justify-center text-xs font-black shadow-xs group-hover:scale-105 transition-transform">
+            P
+          </span>
+          <span>Patungans</span>
         </a>
 
-        {/* Zone 2: Desktop Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-600">
+        {/* Zone 2: Desktop Navigation Links (GlassyUI Segmented Pills with Smooth Slide) */}
+        <nav className="hidden lg:flex items-center gap-1 glass-tabs-track p-1 rounded-full text-xs font-semibold relative">
           {canEditActiveBill ? (
             <button
               type="button"
               onClick={() => setViewMode('editor')}
-              className={`hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 ${
+              className={`relative min-h-[34px] px-3.5 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0 flex items-center justify-center ${
                 viewMode === 'editor'
-                  ? 'text-slate-900 font-bold underline underline-offset-8 decoration-2 decoration-[#00AED6]'
-                  : ''
+                  ? 'font-extrabold text-[#00AED6]'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Buat Split Bill
+              {viewMode === 'editor' && (
+                <motion.div
+                  layoutId="top-nav-active-pill"
+                  className="glass-tab-pill-white"
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+              <span className="relative z-10">Buat Split Bill</span>
             </button>
           ) : (
             <button
               type="button"
               onClick={handleCreateNewBill}
-              className="hover:text-slate-900 transition-colors whitespace-nowrap shrink-0"
+              className="relative min-h-[34px] px-3.5 py-1.5 rounded-full text-slate-600 hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 flex items-center justify-center"
             >
-              + Buat Split Bill Baru
+              <span className="relative z-10">+ Buat Split Bill Baru</span>
             </button>
           )}
           <button
@@ -1543,13 +1562,20 @@ export default function App() {
               syncBillsFromServer(currentUser);
               setViewMode('saved');
             }}
-            className={`hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 ${
+            className={`relative min-h-[34px] px-3.5 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0 flex items-center justify-center ${
               viewMode === 'saved'
-                ? 'text-slate-900 font-bold underline underline-offset-8 decoration-2 decoration-[#00AED6]'
-                : ''
+                ? 'font-extrabold text-[#00AED6]'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Riwayat Split Bill
+            {viewMode === 'saved' && (
+              <motion.div
+                layoutId="top-nav-active-pill"
+                className="glass-tab-pill-white"
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              />
+            )}
+            <span className="relative z-10">Riwayat Split Bill ({savedBills.length})</span>
           </button>
           <button
             type="button"
@@ -1557,13 +1583,20 @@ export default function App() {
               setPortalParticipantId(undefined);
               setViewMode('portal');
             }}
-            className={`hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 ${
+            className={`relative min-h-[34px] px-3.5 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0 flex items-center justify-center ${
               viewMode === 'portal'
-                ? 'text-slate-900 font-bold underline underline-offset-8 decoration-2 decoration-[#00AED6]'
-                : ''
+                ? 'font-extrabold text-[#00AED6]'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Halaman Link Bayar
+            {viewMode === 'portal' && (
+              <motion.div
+                layoutId="top-nav-active-pill"
+                className="glass-tab-pill-white"
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              />
+            )}
+            <span className="relative z-10">Halaman Link Bayar</span>
           </button>
         </nav>
 
@@ -1573,7 +1606,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setIsScannerOpen(true)}
-              className="min-h-[40px] px-3.5 sm:px-4 py-2 text-xs font-bold text-white bg-[#00880D] hover:bg-[#00700B] active:scale-[0.98] rounded-full transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 shadow-2xs"
+              className="glass-button-success min-h-[38px] px-3.5 sm:px-4 py-2 text-xs font-extrabold rounded-full whitespace-nowrap shrink-0 flex items-center gap-1.5"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>Scan Struk</span>
@@ -1582,7 +1615,7 @@ export default function App() {
             <button
               type="button"
               onClick={handleCreateNewBill}
-              className="min-h-[40px] px-3.5 sm:px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5"
+              className="glass-button-standard min-h-[38px] px-3.5 sm:px-4 py-2 text-xs font-bold rounded-full whitespace-nowrap shrink-0 flex items-center gap-1.5"
             >
               <FilePlus2 className="w-3.5 h-3.5 text-[#00AED6]" />
               <span>Buat Struk Sendiri</span>
@@ -1619,12 +1652,12 @@ export default function App() {
         ) : viewMode === 'saved' ? (
           <div className="max-w-6xl mx-auto px-3.5 sm:px-8 py-5 sm:py-8">
             {/* Compact Google Auth Card in Saved View for Mobile */}
-            <div className="mb-5 bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+            <div className="mb-5 glass-panel rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-lg">
               <div className="flex items-center gap-3 min-w-0">
                 <button
                   type="button"
                   onClick={openUserProfileAvatarModal}
-                  className="relative group shrink-0 focus:outline-none focus:ring-2 focus:ring-[#00AED6] rounded-full"
+                  className="relative group shrink-0 focus:outline-none focus:ring-2 focus:ring-[#00AED6]/60 rounded-full transition-transform active:scale-95"
                   title="Ganti Avatar Profil"
                 >
                   {userActivePhoto ? (
@@ -1632,17 +1665,17 @@ export default function App() {
                       src={userActivePhoto}
                       alt={currentUser?.displayName || 'Avatar Profil'}
                       referrerPolicy="no-referrer"
-                      className="w-10 h-10 rounded-full object-cover border-2 border-[#00AED6] shadow-2xs group-hover:opacity-90 transition-opacity"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-[#00AED6] shadow-sm group-hover:opacity-90 transition-opacity"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-[#00AED6]/10 text-[#00AED6] flex items-center justify-center font-extrabold text-xs group-hover:bg-[#00AED6]/20 transition-colors">
+                    <div className="w-10 h-10 rounded-full bg-[#00AED6]/15 text-[#00AED6] flex items-center justify-center font-extrabold text-xs group-hover:bg-[#00AED6]/25 transition-colors border border-[#00AED6]/30">
                       {currentUser?.displayName
                         ? getInitials(currentUser.displayName)
                         : 'G'}
                     </div>
                   )}
                   <span
-                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-xs text-[9px] group-hover:bg-[#00AED6] transition-colors"
+                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-slate-900/90 backdrop-blur-xs text-white flex items-center justify-center shadow-xs text-[9px] group-hover:bg-[#00AED6] transition-colors border border-white/40"
                     title="Ganti Avatar"
                   >
                     <Camera className="w-2.5 h-2.5" />
@@ -1677,7 +1710,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={handleGoogleLogout}
-                    className="min-h-[40px] px-3.5 py-2 rounded-full border border-slate-200 text-xs font-bold text-slate-600 hover:text-red-600 flex items-center gap-1.5"
+                    className="min-h-[40px] px-3.5 py-2 rounded-full glass-button-standard text-xs font-bold text-slate-700 hover:text-red-600 flex items-center gap-1.5"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     Keluar
@@ -1686,14 +1719,14 @@ export default function App() {
                   <button
                     type="button"
                     onClick={handleGoogleLogin}
-                    className="min-h-[40px] px-4 py-2 rounded-full bg-slate-900 text-white text-xs font-bold flex items-center gap-1.5"
+                    className="min-h-[40px] px-4 py-2 rounded-full glass-button-prominent text-xs font-bold flex items-center gap-1.5"
                   >
                     Masuk Google
                   </button>
                 ))}
             </div>
 
-            <div className="flex items-center justify-between gap-3 pb-4 border-b border-slate-200">
+            <div className="flex items-center justify-between gap-3 pb-4 border-b border-white/20">
               <div>
                 <h1 className="text-lg sm:text-2xl font-extrabold text-slate-900 font-display">
                   Riwayat Split Bill ({savedBills.length})
@@ -1705,7 +1738,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleCreateNewBill}
-                className="min-h-[42px] px-4 py-2 rounded-full bg-[#00880D] hover:bg-[#00700B] active:scale-[0.98] text-white text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0"
+                className="min-h-[42px] px-4 py-2 rounded-full glass-button-success text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 shadow-md"
               >
                 <FilePlus2 className="w-4 h-4" />
                 <span>Struk Baru</span>
@@ -1713,8 +1746,8 @@ export default function App() {
             </div>
 
             {savedBills.length === 0 ? (
-              <div className="bg-white border border-slate-200 rounded-3xl p-8 sm:p-12 text-center mt-6 flex flex-col items-center max-w-md mx-auto shadow-2xs">
-                <div className="w-16 h-16 rounded-full bg-[#00AED6]/10 text-[#00AED6] flex items-center justify-center mb-4">
+              <div className="glass-panel rounded-3xl p-8 sm:p-12 text-center mt-6 flex flex-col items-center max-w-md mx-auto shadow-xl">
+                <div className="w-16 h-16 rounded-full bg-[#00AED6]/15 text-[#00AED6] border border-[#00AED6]/30 flex items-center justify-center mb-4 shadow-sm">
                   <History className="w-8 h-8" />
                 </div>
                 <h3 className="text-base sm:text-lg font-extrabold text-slate-900 font-display">
@@ -1725,11 +1758,11 @@ export default function App() {
                     ? 'Anda belum memiliki tagihan tersimpan atau belum ada teman yang menambahkan email Anda ke patungan.'
                     : 'Buat struk baru atau buka link patungan dari teman, maka riwayatnya akan otomatis tersimpan di sini.'}
                 </p>
-                <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
                   <button
                     type="button"
                     onClick={handleCreateNewBill}
-                    className="min-h-[44px] px-5 py-2.5 rounded-full bg-[#00880D] hover:bg-[#00700B] text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-sm transition-all"
+                    className="min-h-[44px] px-5 py-2.5 rounded-full glass-button-success text-xs sm:text-sm font-bold flex items-center gap-2 shadow-md transition-all"
                   >
                     <FilePlus2 className="w-4 h-4" />
                     Buat Struk Baru
@@ -1738,7 +1771,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={handleGoogleLogin}
-                      className="min-h-[44px] px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-sm transition-all"
+                      className="min-h-[44px] px-5 py-2.5 rounded-full glass-button-prominent text-xs sm:text-sm font-bold flex items-center gap-2 shadow-md transition-all"
                     >
                       Masuk Google
                     </button>
@@ -1771,20 +1804,20 @@ export default function App() {
                   return (
                     <div
                       key={billItem.id}
-                      className={`bg-white rounded-3xl border-2 p-5 flex flex-col justify-between transition-all shadow-2xs ${
+                      className={`glass-card glass-card-interactive rounded-3xl p-5 flex flex-col justify-between transition-all shadow-md ${
                         isCurrent
-                          ? 'border-[#00AED6] bg-[#00AED6]/[0.02]'
-                          : 'border-slate-200 hover:border-slate-300'
+                          ? 'glass-card-active shadow-[#00AED6]/15'
+                          : ''
                       }`}
                     >
                       <div>
                         <div className="flex items-center justify-between gap-2">
                           <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5">
                             <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                              className={`glass-badge text-[10px] font-extrabold ${
                                 canEditThisBill
-                                  ? 'bg-slate-100 text-slate-700'
-                                  : 'bg-[#00AED6]/10 text-[#00AED6]'
+                                  ? 'text-slate-700'
+                                  : 'text-[#00AED6] bg-[#00AED6]/10 border-[#00AED6]/30'
                               }`}
                             >
                               {canEditThisBill
@@ -1794,35 +1827,35 @@ export default function App() {
                             <span className="font-bold text-slate-700">
                               {billItem.category}
                             </span>
-                            <span aria-hidden="true">·</span>
-                            <span>{billItem.date}</span>
+                            <span aria-hidden="true" className="text-slate-400">·</span>
+                            <span className="text-slate-500">{billItem.date}</span>
                           </div>
                           <button
                             type="button"
                             onClick={() => handleDeleteSavedBill(billItem.id)}
-                            className="min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-red-600 rounded-full"
+                            className="min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-500/10 rounded-full transition-colors"
                             title="Hapus dari riwayat"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                        <h2 className="text-base font-extrabold text-slate-900 font-display mt-1">
+                        <h2 className="text-base font-extrabold text-slate-900 font-display mt-1.5">
                           {billItem.title || 'Split Bill Tanpa Judul'}
                         </h2>
                         {billItem.creatorName && (
-                          <p className="text-[11px] text-slate-400 mt-0.5">
+                          <p className="text-[11px] text-slate-500 mt-0.5">
                             Penagih: {billItem.creatorName}
                           </p>
                         )}
-                        <div className="mt-3 pt-3 border-t border-dashed border-slate-200 flex items-baseline justify-between">
+                        <div className="mt-3 pt-3 border-t border-dashed border-slate-300/60 flex items-baseline justify-between">
                           <span className="text-xs text-slate-500">Total Struk</span>
                           <span className="text-base font-extrabold font-mono tabular-nums text-slate-900">
                             {formatRupiah(itemSummary.grandTotal)}
                           </span>
                         </div>
                         {myParticipantCalc && (
-                          <div className="mt-1.5 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
-                            <span className="text-slate-600 font-semibold">
+                          <div className="mt-2 px-3 py-2 rounded-xl bg-white/50 border border-white/60 shadow-2xs flex items-center justify-between text-xs">
+                            <span className="text-slate-700 font-semibold">
                               Bagianmu ({myParticipantCalc.participant.name})
                             </span>
                             <span className="font-mono tabular-nums font-extrabold text-slate-900">
@@ -1839,7 +1872,7 @@ export default function App() {
                             </span>
                           </div>
                         )}
-                        <div className="mt-1.5 flex items-center justify-between text-xs">
+                        <div className="mt-2 flex items-center justify-between text-xs">
                           <span className="text-slate-500">Status Lunas</span>
                           <span className="font-mono tabular-nums font-bold text-[#00880D]">
                             {itemSummary.paidCount}/{billItem.participants.length} Orang (
@@ -1848,7 +1881,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
+                      <div className="mt-4 pt-3 border-t border-white/30 flex items-center gap-2">
                         {canEditThisBill && (
                           <button
                             type="button"
@@ -1858,7 +1891,7 @@ export default function App() {
                               setViewMode('editor');
                               setMobileEditorTab('input');
                             }}
-                            className="flex-1 min-h-[42px] py-2 px-3 rounded-full bg-[#00AED6] hover:bg-[#0099BD] text-white text-xs font-bold transition-colors whitespace-nowrap"
+                            className="flex-1 min-h-[42px] py-2 px-3 rounded-full glass-button-prominent text-xs font-bold transition-all whitespace-nowrap shadow-sm"
                           >
                             Edit Struk
                           </button>
@@ -1873,10 +1906,10 @@ export default function App() {
                             );
                             setViewMode('portal');
                           }}
-                          className={`min-h-[42px] py-2 px-4 rounded-full text-xs font-bold transition-colors whitespace-nowrap ${
+                          className={`min-h-[42px] py-2 px-4 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
                             canEditThisBill
-                              ? 'border border-slate-200 hover:bg-slate-50 text-slate-700'
-                              : 'flex-1 bg-slate-900 hover:bg-slate-800 text-white'
+                              ? 'glass-button-standard text-slate-700'
+                              : 'flex-1 glass-button-prominent shadow-sm'
                           }`}
                         >
                           {canEditThisBill ? 'Buka Link Bayar' : 'Lihat & Bayar Tagihan'}
@@ -1892,12 +1925,12 @@ export default function App() {
           /* MOBILE-FIRST SPLIT BILL EDITOR WORKSPACE */
           <div className="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-6">
             {/* Compact Mobile-First Account & Quick Reset Bar */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:px-5 flex items-center justify-between gap-2.5 shadow-2xs">
+            <div className="glass-panel rounded-2xl p-3 sm:px-5 flex items-center justify-between gap-2.5 shadow-lg">
               <div className="flex items-center gap-2.5 min-w-0">
                 <button
                   type="button"
                   onClick={openUserProfileAvatarModal}
-                  className="relative group shrink-0 focus:outline-none focus:ring-2 focus:ring-[#00AED6] rounded-full"
+                  className="relative group shrink-0 focus:outline-none focus:ring-2 focus:ring-[#00AED6]/60 rounded-full transition-transform active:scale-95"
                   title="Ganti Avatar Profil"
                 >
                   {userActivePhoto ? (
@@ -1905,17 +1938,17 @@ export default function App() {
                       src={userActivePhoto}
                       alt={currentUser?.displayName || 'Avatar Profil'}
                       referrerPolicy="no-referrer"
-                      className="w-9 h-9 rounded-full object-cover border-2 border-[#00AED6] shadow-2xs group-hover:opacity-90 transition-opacity"
+                      className="w-9 h-9 rounded-full object-cover border-2 border-[#00AED6] shadow-sm group-hover:opacity-90 transition-opacity"
                     />
                   ) : (
-                    <div className="w-9 h-9 rounded-full bg-[#00AED6]/10 text-[#00AED6] flex items-center justify-center font-extrabold text-xs group-hover:bg-[#00AED6]/20 transition-colors">
+                    <div className="w-9 h-9 rounded-full bg-[#00AED6]/15 text-[#00AED6] flex items-center justify-center font-extrabold text-xs group-hover:bg-[#00AED6]/25 transition-colors border border-[#00AED6]/30">
                       {currentUser?.displayName
                         ? getInitials(currentUser.displayName)
                         : 'G'}
                     </div>
                   )}
                   <span
-                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-xs text-[9px] group-hover:bg-[#00AED6] transition-colors"
+                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-slate-900/90 backdrop-blur-xs text-white flex items-center justify-center shadow-xs text-[9px] group-hover:bg-[#00AED6] transition-colors border border-white/40"
                     title="Ganti Avatar"
                   >
                     <Camera className="w-2.5 h-2.5" />
@@ -1975,7 +2008,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={handleCreateNewBill}
-                  className="min-h-[38px] px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1 transition-colors whitespace-nowrap"
+                  className="min-h-[38px] px-3 py-1.5 rounded-full glass-button-standard text-xs font-bold text-slate-700 flex items-center gap-1 transition-all whitespace-nowrap"
                   title="Kosongkan dan buat struk baru"
                 >
                   <FilePlus2 className="w-3.5 h-3.5 text-[#00AED6]" />
@@ -1988,7 +2021,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={handleGoogleLogout}
-                      className="min-h-[38px] px-3 py-1.5 rounded-full border border-slate-200 hover:bg-red-50 hover:text-red-600 text-xs font-semibold text-slate-600 flex items-center gap-1 transition-colors whitespace-nowrap"
+                      className="min-h-[38px] px-3 py-1.5 rounded-full glass-button-standard hover:text-red-600 text-xs font-semibold text-slate-600 flex items-center gap-1 transition-all whitespace-nowrap"
                       title="Keluar dari Google"
                     >
                       <LogOut className="w-3.5 h-3.5" />
@@ -1998,7 +2031,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={handleGoogleLogin}
-                      className="min-h-[38px] px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 transition-colors whitespace-nowrap shadow-2xs"
+                      className="min-h-[38px] px-3.5 py-1.5 rounded-full glass-button-prominent text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap shadow-sm"
                     >
                       <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
                         <path
@@ -2024,34 +2057,36 @@ export default function App() {
               </div>
             </div>
 
-            {/* Compact Teal Summary Card (Optimized for Mobile 375px-430px) */}
-            <div className="mt-3.5 bg-gradient-to-r from-[#00AED6] to-[#0093B8] rounded-3xl p-4 sm:p-6 text-white shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Compact Teal Summary Card with GlassyUI polish */}
+            <div className="mt-3.5 relative overflow-hidden rounded-3xl p-4 sm:p-6 text-white shadow-xl bg-gradient-to-br from-[#00AED6] via-[#0093B8] to-[#007A99] border border-white/30 backdrop-blur-md">
+              {/* Glass specular sheen overlay */}
+              <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-black/10 pointer-events-none" />
+              <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-white/85 flex items-center gap-1.5">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-white/90 flex items-center gap-1.5 drop-shadow-xs">
                     <Receipt className="w-3.5 h-3.5" />
                     <span>Split Bill · Patungan Otomatis</span>
                   </div>
-                  <h1 className="text-lg sm:text-2xl font-extrabold font-display mt-0.5 truncate">
+                  <h1 className="text-lg sm:text-2xl font-extrabold font-display mt-0.5 truncate drop-shadow-xs">
                     {activeBill.title || 'Buat Tagihan Split Bill Baru'}
                   </h1>
                 </div>
 
                 {/* 3 Compact Stat Boxes */}
                 <div className="grid grid-cols-3 gap-2 shrink-0">
-                  <div className="bg-white/15 backdrop-blur-xs rounded-2xl px-3 py-2 border border-white/20">
-                    <span className="text-[10px] text-white/80 block">
+                  <div className="bg-white/20 backdrop-blur-md rounded-2xl px-3 py-2 border border-white/30 shadow-xs">
+                    <span className="text-[10px] text-white/90 block font-medium">
                       Total Struk
                     </span>
-                    <span className="text-xs sm:text-base font-extrabold font-mono tabular-nums text-white mt-0.5 block truncate">
+                    <span className="text-xs sm:text-base font-extrabold font-mono tabular-nums text-white mt-0.5 block truncate drop-shadow-xs">
                       {formatRupiah(summary.grandTotal)}
                     </span>
                   </div>
-                  <div className="bg-white/15 backdrop-blur-xs rounded-2xl px-3 py-2 border border-white/20">
-                    <span className="text-[10px] text-white/80 block">
+                  <div className="bg-white/20 backdrop-blur-md rounded-2xl px-3 py-2 border border-white/30 shadow-xs">
+                    <span className="text-[10px] text-white/90 block font-medium">
                       Pajak & Biaya
                     </span>
-                    <span className="text-xs sm:text-base font-extrabold font-mono tabular-nums text-white mt-0.5 block truncate">
+                    <span className="text-xs sm:text-base font-extrabold font-mono tabular-nums text-white mt-0.5 block truncate drop-shadow-xs">
                       +{formatRupiah(
                         summary.computedTax +
                           summary.computedService +
@@ -2059,11 +2094,11 @@ export default function App() {
                       )}
                     </span>
                   </div>
-                  <div className="bg-white/15 backdrop-blur-xs rounded-2xl px-3 py-2 border border-white/20">
-                    <span className="text-[10px] text-white/80 block">
+                  <div className="bg-white/20 backdrop-blur-md rounded-2xl px-3 py-2 border border-white/30 shadow-xs">
+                    <span className="text-[10px] text-white/90 block font-medium">
                       Lunas
                     </span>
-                    <span className="text-xs sm:text-base font-extrabold font-mono tabular-nums text-white mt-0.5 block">
+                    <span className="text-xs sm:text-base font-extrabold font-mono tabular-nums text-white mt-0.5 block drop-shadow-xs">
                       {summary.paidCount}/{activeBill.participants.length} Org
                     </span>
                   </div>
@@ -2071,32 +2106,50 @@ export default function App() {
               </div>
             </div>
 
-            {/* Mobile Step Switcher (Visible on mobile/tablet < lg so users don't scroll endlessly) */}
-            <div className="lg:hidden mt-3.5 p-1 bg-white border border-slate-200 rounded-2xl grid grid-cols-2 gap-1 shadow-2xs">
+            {/* Mobile Step Switcher (Visible on mobile/tablet < lg) */}
+            <div className="lg:hidden mt-3.5 p-1.5 glass-tabs-track rounded-2xl grid grid-cols-2 gap-1.5 shadow-md relative">
               <button
                 type="button"
                 onClick={() => setMobileEditorTab('input')}
-                className={`min-h-[42px] py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${
+                className={`relative min-h-[42px] py-2 px-3 rounded-xl text-xs font-extrabold transition-colors flex items-center justify-center gap-1.5 ${
                   mobileEditorTab === 'input'
-                    ? 'bg-slate-900 text-white shadow-2xs'
-                    : 'text-slate-600'
+                    ? 'text-slate-900'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Receipt className="w-3.5 h-3.5" />
-                <span>1. Isi Struk & Teman</span>
+                {mobileEditorTab === 'input' && (
+                  <motion.div
+                    layoutId="mobile-editor-tab-pill"
+                    className="glass-tab-pill-white"
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <Receipt className="w-3.5 h-3.5" />
+                  <span>1. Isi Struk & Teman</span>
+                </span>
               </button>
               <button
                 type="button"
                 onClick={() => setMobileEditorTab('summary')}
-                className={`min-h-[42px] py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${
+                className={`relative min-h-[42px] py-2 px-3 rounded-xl text-xs font-extrabold transition-colors flex items-center justify-center gap-1.5 ${
                   mobileEditorTab === 'summary'
-                    ? 'bg-slate-900 text-white shadow-2xs'
-                    : 'text-slate-600'
+                    ? 'text-slate-900'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Wallet className="w-3.5 h-3.5" />
-                <span>
-                  2. Tagihan & QRIS ({activeBill.participants.length})
+                {mobileEditorTab === 'summary' && (
+                  <motion.div
+                    layoutId="mobile-editor-tab-pill"
+                    className="glass-tab-pill-white"
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <Wallet className="w-3.5 h-3.5" />
+                  <span>
+                    2. Tagihan & QRIS ({activeBill.participants.length})
+                  </span>
                 </span>
               </button>
             </div>
@@ -2110,36 +2163,54 @@ export default function App() {
                 }`}
               >
                 {/* STEP 1: Mode Switcher & Bill Header Card */}
-                <section className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-2xs">
+                <section className="glass-panel rounded-3xl p-4 sm:p-6 shadow-lg">
                   {/* Split Mode Pill Switcher: Atur Jumlah vs Bagi Rata */}
-                  <div className="p-1 bg-slate-100 rounded-full grid grid-cols-2 gap-1 mb-4">
+                  <div className="p-1 glass-tabs-track rounded-full grid grid-cols-2 gap-1 mb-4 shadow-inner relative">
                     <button
                       type="button"
                       onClick={() =>
                         setActiveBill((prev) => ({ ...prev, mode: 'itemized' }))
                       }
-                      className={`min-h-[42px] py-2 px-3 rounded-full text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${
+                      className={`relative min-h-[42px] py-2 px-3 rounded-full text-xs font-extrabold transition-colors flex items-center justify-center gap-1.5 ${
                         activeBill.mode === 'itemized'
-                          ? 'bg-[#00AED6] text-white shadow-xs'
+                          ? 'text-slate-900'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      <Receipt className="w-3.5 h-3.5 shrink-0" />
-                      <span>Atur Jumlah (Menu)</span>
+                      {activeBill.mode === 'itemized' && (
+                        <motion.div
+                          layoutId="split-mode-pill"
+                          className="glass-tab-pill-white"
+                          transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                        />
+                      )}
+                      <span className="relative z-10 flex items-center gap-1.5">
+                        <Receipt className="w-3.5 h-3.5 shrink-0" />
+                        <span>Atur Jumlah (Menu)</span>
+                      </span>
                     </button>
                     <button
                       type="button"
                       onClick={() =>
                         setActiveBill((prev) => ({ ...prev, mode: 'equal' }))
                       }
-                      className={`min-h-[42px] py-2 px-3 rounded-full text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${
+                      className={`relative min-h-[42px] py-2 px-3 rounded-full text-xs font-extrabold transition-colors flex items-center justify-center gap-1.5 ${
                         activeBill.mode === 'equal'
-                          ? 'bg-[#00AED6] text-white shadow-xs'
+                          ? 'text-slate-900'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      <Users className="w-3.5 h-3.5 shrink-0" />
-                      <span>Bagi Rata</span>
+                      {activeBill.mode === 'equal' && (
+                        <motion.div
+                          layoutId="split-mode-pill"
+                          className="glass-tab-pill-white"
+                          transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                        />
+                      )}
+                      <span className="relative z-10 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 shrink-0" />
+                        <span>Bagi Rata</span>
+                      </span>
                     </button>
                   </div>
 
@@ -2155,7 +2226,7 @@ export default function App() {
                           setActiveBill((prev) => ({ ...prev, title: e.target.value }))
                         }
                         placeholder="Ketik nama tempat makan atau acara patungan..."
-                        className="w-full min-h-[44px] px-4 py-2.5 rounded-2xl border border-slate-300 text-sm font-semibold text-slate-900 focus:border-[#00AED6] focus:outline-none"
+                        className="glass-input w-full min-h-[44px] px-4 py-2.5 rounded-2xl text-sm font-semibold text-slate-900"
                       />
                     </div>
 
@@ -2173,7 +2244,7 @@ export default function App() {
                           }))
                         }
                         placeholder="Nama Anda..."
-                        className="w-full min-h-[42px] px-3.5 py-2 rounded-2xl border border-slate-300 text-xs font-medium text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                        className="glass-input w-full min-h-[42px] px-3.5 py-2 rounded-2xl text-xs font-medium text-slate-800"
                       />
                     </div>
 
@@ -2190,7 +2261,7 @@ export default function App() {
                               category: e.target.value,
                             }))
                           }
-                          className="w-full min-h-[42px] px-3 py-2 rounded-2xl border border-slate-300 text-xs font-medium text-slate-800 bg-white focus:border-[#00AED6] focus:outline-none"
+                          className="glass-input w-full min-h-[42px] px-3 py-2 rounded-2xl text-xs font-medium text-slate-800"
                         >
                           <option value="Makan & Minum">Makan & Minum</option>
                           <option value="Nongkrong">Nongkrong</option>
@@ -2209,7 +2280,7 @@ export default function App() {
                           onChange={(e) =>
                             setActiveBill((prev) => ({ ...prev, date: e.target.value }))
                           }
-                          className="w-full min-h-[42px] px-3 py-2 rounded-2xl border border-slate-300 text-xs font-mono text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                          className="glass-input w-full min-h-[42px] px-3 py-2 rounded-2xl text-xs font-mono text-slate-800"
                         />
                       </div>
                     </div>
@@ -2225,15 +2296,15 @@ export default function App() {
                           setActiveBill((prev) => ({ ...prev, notes: e.target.value }))
                         }
                         placeholder="Tambahkan pesan untuk teman patungan..."
-                        className="w-full min-h-[42px] px-3.5 py-2 rounded-2xl border border-slate-300 text-xs text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                        className="glass-input w-full min-h-[42px] px-3.5 py-2 rounded-2xl text-xs text-slate-800"
                       />
                     </div>
                   </div>
                 </section>
 
                 {/* STEP 2: Circular Participant Bubbles Bar */}
-                <section className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-2xs">
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                <section className="glass-panel rounded-3xl p-4 sm:p-6 shadow-lg">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/20">
                     <div>
                       <h2 className="text-sm sm:text-base font-extrabold text-slate-900 font-display">
                         Teman Patungan ({activeBill.participants.length} Orang)
@@ -2265,7 +2336,7 @@ export default function App() {
                               photoURL: currentUser.photoURL || undefined,
                             })
                           }
-                          className="h-8 px-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold inline-flex items-center gap-1.5 transition-colors shrink-0"
+                          className="h-8 px-3 rounded-full glass-button-standard text-[11px] font-bold inline-flex items-center gap-1.5 transition-all shrink-0"
                         >
                           <UserCheck className="w-3.5 h-3.5 text-[#00AED6]" />
                           <span>+ Masukkan Saya</span>
@@ -2290,7 +2361,7 @@ export default function App() {
                             setShowUserSuggestions(true);
                           }}
                           placeholder="Ketik nama atau cari akun teman..."
-                          className="w-full min-h-[42px] px-3.5 py-2 rounded-2xl border border-slate-300 text-xs font-medium text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                          className="glass-input w-full min-h-[42px] px-3.5 py-2 rounded-2xl text-xs font-medium text-slate-800"
                         />
                       </div>
 
@@ -2304,7 +2375,7 @@ export default function App() {
                             setShowUserSuggestions(true);
                           }}
                           placeholder="Email akun teman (opsional)"
-                          className="w-full min-h-[42px] px-3.5 py-2 rounded-2xl border border-slate-300 text-xs text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                          className="glass-input w-full min-h-[42px] px-3.5 py-2 rounded-2xl text-xs text-slate-800"
                         />
                       </div>
 
@@ -2314,20 +2385,20 @@ export default function App() {
                           value={newFriendPhone}
                           onChange={(e) => setNewFriendPhone(e.target.value)}
                           placeholder="No. WA (opsional)"
-                          className="w-full min-h-[42px] px-3 py-2 rounded-2xl border border-slate-300 text-xs font-mono text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                          className="glass-input w-full min-h-[42px] px-3 py-2 rounded-2xl text-xs font-mono text-slate-800"
                         />
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between gap-2 pt-0.5">
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-[11px] text-slate-500">
                         {selectedRegisteredUser?.email
                           ? `✓ Tertaut ke akun terdaftar: ${selectedRegisteredUser.email}`
                           : 'Tips: Isi email Google teman jika ingin struk langsung masuk ke Riwayat akunnya.'}
                       </span>
                       <button
                         type="submit"
-                        className="min-h-[40px] px-5 py-2 rounded-full bg-[#00AED6] hover:bg-[#0099BD] active:scale-[0.98] text-white text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all whitespace-nowrap shrink-0"
+                        className="min-h-[40px] px-5 py-2 rounded-full glass-button-prominent text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all whitespace-nowrap shrink-0 shadow-sm"
                       >
                         <Plus className="w-4 h-4" />
                         <span>Tambah Teman</span>
@@ -2337,7 +2408,7 @@ export default function App() {
 
                   {/* Quick-Add Registered Users & Previous Friends Strip */}
                   {filteredUserSuggestions.length > 0 && (
-                    <div className="mt-3 p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+                    <div className="mt-3 p-3 rounded-2xl glass-card border border-white/40 shadow-xs">
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
                           <Search className="w-3 h-3 text-[#00AED6]" />
@@ -2361,7 +2432,7 @@ export default function App() {
                             key={u.email || u.uid || u.displayName}
                             type="button"
                             onClick={() => handleQuickAddRegisteredUser(u)}
-                            className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-[#00AED6]/5 border border-slate-200 hover:border-[#00AED6] text-left inline-flex items-center gap-2 transition-all shadow-2xs"
+                            className="px-2.5 py-1.5 rounded-xl glass-card hover:border-[#00AED6]/60 text-left inline-flex items-center gap-2 transition-all shadow-xs"
                           >
                             {u.photoURL ? (
                               <img
@@ -2383,7 +2454,7 @@ export default function App() {
                                 )}
                               </div>
                               {u.email && (
-                                <div className="text-[10px] text-slate-400 leading-tight truncate max-w-[160px]">
+                                <div className="text-[10px] text-slate-500 leading-tight truncate max-w-[160px]">
                                   {u.email}
                                 </div>
                               )}
@@ -2397,7 +2468,7 @@ export default function App() {
 
                   {/* Horizontal Circular Avatar Strip + List */}
                   {activeBill.participants.length === 0 ? (
-                    <div className="mt-4 p-5 rounded-2xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
+                    <div className="mt-4 p-5 rounded-2xl border border-dashed border-slate-300/60 text-center text-xs text-slate-400">
                       Belum ada anggota patungan. Ketik nama teman atau pilih akun terdaftar di atas.
                     </div>
                   ) : (
@@ -2415,7 +2486,7 @@ export default function App() {
                                 <button
                                   type="button"
                                   onClick={() => openParticipantAvatarModal(p)}
-                                  className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#00AED6]"
+                                  className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#00AED6]/60 transition-transform active:scale-95"
                                   title={`Ganti avatar untuk ${p.name}`}
                                 >
                                   {p.photoURL ? (
@@ -2423,11 +2494,11 @@ export default function App() {
                                       src={p.photoURL}
                                       alt={p.name}
                                       referrerPolicy="no-referrer"
-                                      className="w-11 h-11 rounded-full object-cover border border-slate-200 shadow-2xs group-hover:opacity-90 transition-opacity"
+                                      className="w-11 h-11 rounded-full object-cover border border-slate-200/60 shadow-sm group-hover:opacity-90 transition-opacity"
                                     />
                                   ) : (
                                     <div
-                                      className={`w-11 h-11 rounded-full flex items-center justify-center font-extrabold text-xs shadow-2xs group-hover:opacity-90 transition-opacity ${getAvatarColor(
+                                      className={`w-11 h-11 rounded-full flex items-center justify-center font-extrabold text-xs shadow-sm group-hover:opacity-90 transition-opacity ${getAvatarColor(
                                         idx
                                       )}`}
                                     >
@@ -2438,14 +2509,14 @@ export default function App() {
                                 <button
                                   type="button"
                                   onClick={() => openParticipantAvatarModal(p)}
-                                  className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-slate-900 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-slate-900/90 backdrop-blur-xs text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-white/40"
                                   title="Ganti Avatar"
                                 >
-                                  <Camera className="w-2 h-2" />
+                                  <Camera className="w-2.5 h-2.5" />
                                 </button>
                                 {isPaid && (
                                   <span
-                                    className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#00880D] border-2 border-white text-white flex items-center justify-center"
+                                    className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#00880D] border-2 border-white text-white flex items-center justify-center shadow-xs"
                                     title="Sudah Lunas"
                                   >
                                     <Check className="w-2.5 h-2.5" />
@@ -2454,7 +2525,7 @@ export default function App() {
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveParticipant(p.id)}
-                                  className="-top-1 -right-1 absolute w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs hover:bg-red-600 z-10"
+                                  className="-top-1 -right-1 absolute w-5 h-5 rounded-full bg-slate-900/90 text-white flex items-center justify-center text-xs hover:bg-red-600 transition-colors z-10 border border-white/40 shadow-xs"
                                   title={`Hapus ${p.name}`}
                                 >
                                   ×
@@ -2469,7 +2540,7 @@ export default function App() {
                       </div>
 
                       {/* Detailed Participant Rows */}
-                      <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden">
+                      <div className="divide-y divide-white/20 glass-card rounded-2xl overflow-hidden shadow-xs">
                         {activeBill.participants.map((p, idx) => {
                           const calc = summary.participantBreakdowns.find(
                             (b) => b.participant.id === p.id
@@ -2477,7 +2548,7 @@ export default function App() {
                           return (
                             <div
                               key={p.id}
-                              className="p-3 bg-white flex items-center justify-between gap-2"
+                              className="p-3 flex items-center justify-between gap-2 bg-white/40"
                             >
                               <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                 <button
@@ -2491,7 +2562,7 @@ export default function App() {
                                       src={p.photoURL}
                                       alt={p.name}
                                       referrerPolicy="no-referrer"
-                                      className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0 group-hover:opacity-90 transition-opacity"
+                                      className="w-8 h-8 rounded-full object-cover border border-slate-200/60 shrink-0 group-hover:opacity-90 transition-opacity"
                                     />
                                   ) : (
                                     <div
@@ -2509,7 +2580,7 @@ export default function App() {
                                       {p.name}
                                     </span>
                                     {p.email && (
-                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-medium truncate max-w-[180px]">
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/60 text-slate-700 text-[10px] font-medium truncate max-w-[180px] border border-white/60">
                                         <Mail className="w-2.5 h-2.5 text-[#00AED6] shrink-0" />
                                         <span className="truncate">{p.email}</span>
                                       </span>
@@ -2552,7 +2623,7 @@ export default function App() {
                                           ),
                                         }));
                                       }}
-                                      className="w-12 min-h-[36px] px-1.5 py-1 rounded-lg border border-slate-300 text-xs font-mono text-center"
+                                      className="glass-input w-12 min-h-[36px] px-1.5 py-1 rounded-lg text-xs font-mono text-center"
                                     />
                                   </div>
                                 )}
@@ -2565,10 +2636,10 @@ export default function App() {
                                       p.status === 'paid' ? 'unpaid' : 'paid'
                                     )
                                   }
-                                  className={`min-h-[36px] px-3 py-1 rounded-full text-xs font-bold transition-colors whitespace-nowrap ${
+                                  className={`min-h-[34px] px-3 py-1 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
                                     p.status === 'paid'
-                                      ? 'bg-[#00880D]/10 text-[#00880D]'
-                                      : 'bg-slate-100 text-slate-600'
+                                      ? 'glass-badge text-[#00880D] bg-[#00880D]/10 border-[#00880D]/30'
+                                      : 'glass-button-standard text-slate-600'
                                   }`}
                                 >
                                   {p.status === 'paid' ? '✓ Lunas' : 'Belum'}
@@ -2583,17 +2654,17 @@ export default function App() {
                 </section>
 
                 {/* STEP 3: Perforated Receipt Card ("Daftar Pesanan & Pajak") */}
-                <section className="relative bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-2xs overflow-hidden">
+                <section className="relative glass-panel rounded-3xl p-4 sm:p-6 shadow-lg overflow-hidden">
                   <div
                     aria-hidden="true"
-                    className="hidden sm:block absolute -left-3 top-20 w-6 h-6 rounded-full bg-[#F1F5F9] border border-slate-200"
+                    className="hidden sm:block absolute -left-3 top-20 w-6 h-6 rounded-full bg-slate-100/80 border border-white/50 backdrop-blur-md"
                   />
                   <div
                     aria-hidden="true"
-                    className="hidden sm:block absolute -right-3 top-20 w-6 h-6 rounded-full bg-[#F1F5F9] border border-slate-200"
+                    className="hidden sm:block absolute -right-3 top-20 w-6 h-6 rounded-full bg-slate-100/80 border border-white/50 backdrop-blur-md"
                   />
 
-                  <div className="flex items-center justify-between gap-2 pb-4 border-b-2 border-dashed border-slate-200">
+                  <div className="flex items-center justify-between gap-2 pb-4 border-b-2 border-dashed border-white/30">
                     <div>
                       <h2 className="text-sm sm:text-base font-extrabold text-slate-900 font-display flex items-center gap-1.5">
                         <Receipt className="w-4 h-4 text-[#00AED6] shrink-0" />
@@ -2606,7 +2677,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setIsScannerOpen(true)}
-                      className="min-h-[38px] px-3 py-1.5 rounded-full bg-[#00AED6]/10 hover:bg-[#00AED6]/20 text-[#00AED6] text-xs font-extrabold flex items-center gap-1 transition-colors whitespace-nowrap shrink-0"
+                      className="min-h-[38px] px-3.5 py-1.5 rounded-full glass-button-prominent text-xs font-extrabold flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 shadow-sm"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       <span>Scan Foto</span>
@@ -2623,7 +2694,7 @@ export default function App() {
                       value={newItemName}
                       onChange={(e) => setNewItemName(e.target.value)}
                       placeholder="Nama menu / pesanan..."
-                      className="w-full sm:col-span-5 min-h-[44px] px-3.5 py-2 rounded-2xl border border-slate-300 text-xs font-medium text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                      className="glass-input w-full sm:col-span-5 min-h-[44px] px-3.5 py-2 rounded-2xl text-xs font-medium text-slate-800"
                     />
                     <div className="grid grid-cols-12 gap-2 sm:col-span-7">
                       <input
@@ -2634,7 +2705,7 @@ export default function App() {
                           setNewItemQty(Math.max(1, Number(e.target.value) || 1))
                         }
                         placeholder="Qty"
-                        className="col-span-3 min-h-[44px] px-2 py-2 rounded-2xl border border-slate-300 text-xs font-mono text-slate-800 text-center focus:border-[#00AED6] focus:outline-none"
+                        className="glass-input col-span-3 min-h-[44px] px-2 py-2 rounded-2xl text-xs font-mono text-slate-800 text-center"
                       />
                       <input
                         type="number"
@@ -2643,11 +2714,11 @@ export default function App() {
                         value={newItemPrice}
                         onChange={(e) => setNewItemPrice(e.target.value)}
                         placeholder="Harga satuan (Rp)"
-                        className="col-span-5 min-h-[44px] px-3 py-2 rounded-2xl border border-slate-300 text-xs font-mono text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                        className="glass-input col-span-5 min-h-[44px] px-3 py-2 rounded-2xl text-xs font-mono text-slate-800"
                       />
                       <button
                         type="submit"
-                        className="col-span-4 min-h-[44px] px-3 py-2 rounded-full bg-[#00880D] hover:bg-[#00700B] active:scale-[0.98] text-white text-xs font-extrabold flex items-center justify-center gap-1 transition-all whitespace-nowrap"
+                        className="col-span-4 min-h-[44px] px-3 py-2 rounded-full glass-button-success text-xs font-extrabold flex items-center justify-center gap-1 transition-all whitespace-nowrap shadow-sm"
                       >
                         <Plus className="w-4 h-4" />
                         <span>Tambah</span>
@@ -2657,7 +2728,7 @@ export default function App() {
 
                   {/* Menu Items List with Touch-Friendly Avatar Bubble Assignment */}
                   {activeBill.items.length === 0 ? (
-                    <div className="mt-4 p-6 rounded-2xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
+                    <div className="mt-4 p-6 rounded-2xl border border-dashed border-slate-300/60 text-center text-xs text-slate-400">
                       Struk masih kosong. Tambahkan menu di atas atau ketuk tombol <strong>Scan Struk</strong>.
                     </div>
                   ) : (
@@ -2675,7 +2746,7 @@ export default function App() {
                         return (
                           <div
                             key={item.id}
-                            className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2.5"
+                            className="p-3.5 rounded-2xl glass-card space-y-2.5 shadow-xs"
                           >
                             {/* Row 1: Item Name, Move to Travel, & Delete Button */}
                             <div className="flex items-center justify-between gap-2">
@@ -2692,13 +2763,13 @@ export default function App() {
                                     ),
                                   }))
                                 }
-                                className="flex-1 min-w-0 bg-transparent text-sm font-extrabold text-slate-900 focus:bg-white focus:px-2 py-0.5 rounded-md focus:outline-none focus:ring-1 focus:ring-[#00AED6]"
+                                className="flex-1 min-w-0 bg-transparent text-sm font-extrabold text-slate-900 focus:bg-white/70 focus:px-2 py-0.5 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00AED6]/60 transition-all"
                               />
                               <div className="flex items-center gap-1 shrink-0">
                                 <button
                                   type="button"
                                   onClick={() => handleMoveMenuItemToTravel(item)}
-                                  className="min-h-[32px] px-2.5 py-1 rounded-full bg-white hover:bg-[#00AED6]/10 border border-slate-200 hover:border-[#00AED6]/40 text-[11px] font-bold text-slate-600 hover:text-[#00AED6] flex items-center gap-1 transition-colors"
+                                  className="min-h-[32px] px-2.5 py-1 rounded-full glass-button-standard text-[11px] font-bold text-slate-700 hover:text-[#00AED6] flex items-center gap-1 transition-all"
                                   title="Pindahkan item ini ke Patungan Biaya Perjalanan (di luar struk makanan)"
                                 >
                                   <Car className="w-3 h-3" />
@@ -2707,7 +2778,7 @@ export default function App() {
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveItem(item.id)}
-                                  className="min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-red-600 rounded-full transition-colors shrink-0"
+                                  className="min-h-[34px] min-w-[34px] flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors shrink-0"
                                   title="Hapus menu"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -2734,9 +2805,9 @@ export default function App() {
                                       ),
                                     }));
                                   }}
-                                  className="w-12 min-h-[36px] px-2 py-1 rounded-xl border border-slate-300 bg-white text-xs font-mono tabular-nums text-center"
+                                  className="glass-input w-12 min-h-[36px] px-2 py-1 rounded-xl text-xs font-mono tabular-nums text-center"
                                 />
-                                <span className="text-xs text-slate-400">×</span>
+                                <span className="text-xs text-slate-400 font-bold">×</span>
                                 <input
                                   type="number"
                                   min={0}
@@ -2756,12 +2827,12 @@ export default function App() {
                                       ),
                                     }));
                                   }}
-                                  className="w-28 min-h-[36px] px-2.5 py-1 rounded-xl border border-slate-300 bg-white text-xs font-mono tabular-nums text-right"
+                                  className="glass-input w-28 min-h-[36px] px-2.5 py-1 rounded-xl text-xs font-mono tabular-nums text-right"
                                 />
                               </div>
 
                               <div className="text-right">
-                                <span className="text-[10px] text-slate-400 block">
+                                <span className="text-[10px] text-slate-500 block">
                                   Harga Menu
                                 </span>
                                 <span className="text-sm font-extrabold font-mono tabular-nums text-slate-900">
@@ -2773,16 +2844,16 @@ export default function App() {
                             {/* Row 3: Touch-Friendly Participant Assignment Bubbles */}
                             {activeBill.mode === 'itemized' &&
                               activeBill.participants.length > 0 && (
-                                <div className="pt-2.5 border-t border-dashed border-slate-200 space-y-2">
+                                <div className="pt-2.5 border-t border-dashed border-white/30 space-y-2">
                                   <div className="flex flex-wrap items-center gap-1.5">
                                     <button
                                       type="button"
                                       onClick={() => handleAssignAllToItem(item.id)}
-                                      className={`min-h-[36px] px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                                      className={`min-h-[34px] px-3 py-1 rounded-full text-xs font-bold transition-all ${
                                         item.assignedTo.length ===
                                         activeBill.participants.length
-                                          ? 'bg-[#00AED6] text-white'
-                                          : 'bg-white border border-slate-200 text-slate-600'
+                                          ? 'glass-button-prominent shadow-xs'
+                                          : 'glass-button-standard text-slate-600'
                                       }`}
                                     >
                                       Semua
@@ -2798,10 +2869,10 @@ export default function App() {
                                           onClick={() =>
                                             handleToggleItemAssignee(item.id, p.id)
                                           }
-                                          className={`min-h-[36px] pl-1.5 pr-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all active:scale-[0.97] ${
+                                          className={`min-h-[34px] pl-1.5 pr-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all active:scale-[0.97] ${
                                             isSelected
-                                              ? 'bg-[#00880D] text-white shadow-2xs'
-                                              : 'bg-white border border-slate-200 text-slate-600 opacity-80'
+                                              ? 'glass-button-success shadow-xs'
+                                              : 'glass-button-standard text-slate-700 opacity-80'
                                           }`}
                                         >
                                           <span
@@ -2821,7 +2892,7 @@ export default function App() {
                                     })}
                                   </div>
 
-                                  <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono tabular-nums">
+                                  <div className="flex items-center justify-between text-[11px] text-slate-600 font-mono tabular-nums">
                                     <span>
                                       Dibagi {assignedCount || activeBill.participants.length} orang
                                     </span>
@@ -2838,7 +2909,7 @@ export default function App() {
                   )}
 
                   {/* Receipt Perforated Divider for Tax, Service, Delivery, Discount */}
-                  <div className="mt-5 pt-5 border-t-2 border-dashed border-slate-200">
+                  <div className="mt-5 pt-5 border-t-2 border-dashed border-white/30">
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
                       <div>
                         <h3 className="text-sm font-extrabold text-slate-900 font-display">
@@ -2849,7 +2920,7 @@ export default function App() {
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-full">
+                      <div className="flex items-center gap-1 p-1 glass-tabs-track rounded-full shadow-inner relative">
                         <button
                           type="button"
                           onClick={() =>
@@ -2858,38 +2929,52 @@ export default function App() {
                               extraRule: 'proportional',
                             }))
                           }
-                          className={`min-h-[32px] px-3 py-1 text-xs font-bold rounded-full transition-colors whitespace-nowrap ${
+                          className={`relative min-h-[32px] px-3 py-1 text-xs font-bold rounded-full transition-colors whitespace-nowrap ${
                             activeBill.extraRule === 'proportional'
-                              ? 'bg-white text-slate-900 shadow-2xs'
-                              : 'text-slate-600'
+                              ? 'text-slate-900'
+                              : 'text-slate-600 hover:text-slate-900'
                           }`}
                         >
-                          Proporsional
+                          {activeBill.extraRule === 'proportional' && (
+                            <motion.div
+                              layoutId="extra-rule-pill"
+                              className="glass-tab-pill-white"
+                              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                            />
+                          )}
+                          <span className="relative z-10">Proporsional</span>
                         </button>
                         <button
                           type="button"
                           onClick={() =>
                             setActiveBill((prev) => ({ ...prev, extraRule: 'equal' }))
                           }
-                          className={`min-h-[32px] px-3 py-1 text-xs font-bold rounded-full transition-colors whitespace-nowrap ${
+                          className={`relative min-h-[32px] px-3 py-1 text-xs font-bold rounded-full transition-colors whitespace-nowrap ${
                             activeBill.extraRule === 'equal'
-                              ? 'bg-white text-slate-900 shadow-2xs'
-                              : 'text-slate-600'
+                              ? 'text-slate-900'
+                              : 'text-slate-600 hover:text-slate-900'
                           }`}
                         >
-                          Bagi Rata
+                          {activeBill.extraRule === 'equal' && (
+                            <motion.div
+                              layoutId="extra-rule-pill"
+                              className="glass-tab-pill-white"
+                              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                            />
+                          )}
+                          <span className="relative z-10">Bagi Rata</span>
                         </button>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {/* Tax */}
-                      <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50">
+                      <div className="p-3.5 rounded-2xl glass-card border border-white/40 shadow-xs">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-bold text-slate-700">
                             Pajak PB1 / PPN
                           </span>
-                          <div className="flex items-center gap-1 text-xs">
+                          <div className="flex items-center gap-1 text-xs glass-tabs-track rounded-full p-0.5 relative">
                             <button
                               type="button"
                               onClick={() =>
@@ -2898,13 +2983,20 @@ export default function App() {
                                   useTaxPercent: true,
                                 }))
                               }
-                              className={`min-h-[28px] px-2.5 py-0.5 rounded-full ${
+                              className={`relative min-h-[26px] px-2.5 py-0.5 rounded-full transition-colors ${
                                 activeBill.useTaxPercent
-                                  ? 'bg-[#00AED6] text-white font-bold'
-                                  : 'text-slate-500'
+                                  ? 'font-bold text-white'
+                                  : 'text-slate-600 hover:text-slate-900'
                               }`}
                             >
-                              %
+                              {activeBill.useTaxPercent && (
+                                <motion.div
+                                  layoutId="tax-type-pill"
+                                  className="glass-tab-pill-cyan"
+                                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                                />
+                              )}
+                              <span className="relative z-10">%</span>
                             </button>
                             <button
                               type="button"
@@ -2914,13 +3006,20 @@ export default function App() {
                                   useTaxPercent: false,
                                 }))
                               }
-                              className={`min-h-[28px] px-2.5 py-0.5 rounded-full ${
+                              className={`relative min-h-[26px] px-2.5 py-0.5 rounded-full transition-colors ${
                                 !activeBill.useTaxPercent
-                                  ? 'bg-[#00AED6] text-white font-bold'
-                                  : 'text-slate-500'
+                                  ? 'font-bold text-white'
+                                  : 'text-slate-600 hover:text-slate-900'
                               }`}
                             >
-                              Rp
+                              {!activeBill.useTaxPercent && (
+                                <motion.div
+                                  layoutId="tax-type-pill"
+                                  className="glass-tab-pill-cyan"
+                                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                                />
+                              )}
+                              <span className="relative z-10">Rp</span>
                             </button>
                           </div>
                         </div>
@@ -2941,9 +3040,9 @@ export default function App() {
                                   ),
                                 }))
                               }
-                              className="w-24 min-h-[40px] px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-mono tabular-nums"
+                              className="glass-input w-24 min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-mono tabular-nums"
                             />
-                            <span className="text-xs font-mono tabular-nums text-slate-600">
+                            <span className="text-xs font-mono tabular-nums text-slate-700 font-bold">
                               = {formatRupiah(summary.computedTax)}
                             </span>
                           </div>
@@ -2962,18 +3061,18 @@ export default function App() {
                                 ),
                               }))
                             }
-                            className="w-full min-h-[40px] px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-mono tabular-nums"
+                            className="glass-input w-full min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-mono tabular-nums"
                           />
                         )}
                       </div>
 
                       {/* Service Charge */}
-                      <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50">
+                      <div className="p-3.5 rounded-2xl glass-card border border-white/40 shadow-xs">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-bold text-slate-700">
                             Biaya Layanan / Service
                           </span>
-                          <div className="flex items-center gap-1 text-xs">
+                          <div className="flex items-center gap-1 text-xs glass-tabs-track rounded-full p-0.5 relative">
                             <button
                               type="button"
                               onClick={() =>
@@ -2982,13 +3081,20 @@ export default function App() {
                                   useServicePercent: true,
                                 }))
                               }
-                              className={`min-h-[28px] px-2.5 py-0.5 rounded-full ${
+                              className={`relative min-h-[26px] px-2.5 py-0.5 rounded-full transition-colors ${
                                 activeBill.useServicePercent
-                                  ? 'bg-[#00AED6] text-white font-bold'
-                                  : 'text-slate-500'
+                                  ? 'font-bold text-white'
+                                  : 'text-slate-600 hover:text-slate-900'
                               }`}
                             >
-                              %
+                              {activeBill.useServicePercent && (
+                                <motion.div
+                                  layoutId="service-type-pill"
+                                  className="glass-tab-pill-cyan"
+                                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                                />
+                              )}
+                              <span className="relative z-10">%</span>
                             </button>
                             <button
                               type="button"
@@ -2998,13 +3104,20 @@ export default function App() {
                                   useServicePercent: false,
                                 }))
                               }
-                              className={`min-h-[28px] px-2.5 py-0.5 rounded-full ${
+                              className={`relative min-h-[26px] px-2.5 py-0.5 rounded-full transition-colors ${
                                 !activeBill.useServicePercent
-                                  ? 'bg-[#00AED6] text-white font-bold'
-                                  : 'text-slate-500'
+                                  ? 'font-bold text-white'
+                                  : 'text-slate-600 hover:text-slate-900'
                               }`}
                             >
-                              Rp
+                              {!activeBill.useServicePercent && (
+                                <motion.div
+                                  layoutId="service-type-pill"
+                                  className="glass-tab-pill-cyan"
+                                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                                />
+                              )}
+                              <span className="relative z-10">Rp</span>
                             </button>
                           </div>
                         </div>
@@ -3025,9 +3138,9 @@ export default function App() {
                                   ),
                                 }))
                               }
-                              className="w-24 min-h-[40px] px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-mono tabular-nums"
+                              className="glass-input w-24 min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-mono tabular-nums"
                             />
-                            <span className="text-xs font-mono tabular-nums text-slate-600">
+                            <span className="text-xs font-mono tabular-nums text-slate-700 font-bold">
                               = {formatRupiah(summary.computedService)}
                             </span>
                           </div>
@@ -3046,13 +3159,13 @@ export default function App() {
                                 ),
                               }))
                             }
-                            className="w-full min-h-[40px] px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-mono tabular-nums"
+                            className="glass-input w-full min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-mono tabular-nums"
                           />
                         )}
                       </div>
 
                       {/* Delivery */}
-                      <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50">
+                      <div className="p-3.5 rounded-2xl glass-card border border-white/40 shadow-xs">
                         <label className="block text-xs font-bold text-slate-700 mb-2">
                           Ongkir Makanan / Kemasan (Rp)
                         </label>
@@ -3070,12 +3183,12 @@ export default function App() {
                               ),
                             }))
                           }
-                          className="w-full min-h-[40px] px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-mono tabular-nums"
+                          className="glass-input w-full min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-mono tabular-nums"
                         />
                       </div>
 
                       {/* Discount */}
-                      <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50">
+                      <div className="p-3.5 rounded-2xl glass-card border border-white/40 shadow-xs">
                         <label className="block text-xs font-bold text-[#00880D] mb-2">
                           Diskon / Promo Voucher (Rp)
                         </label>
@@ -3093,7 +3206,7 @@ export default function App() {
                               ),
                             }))
                           }
-                          className="w-full min-h-[40px] px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-mono tabular-nums text-[#00880D] font-bold"
+                          className="glass-input w-full min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-mono tabular-nums text-[#00880D] font-bold"
                         />
                       </div>
                     </div>
@@ -3101,8 +3214,8 @@ export default function App() {
                 </section>
 
                 {/* STEP 4: Dedicated Travel / Transport Split Card (Outside Food Receipt) */}
-                <section className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-2xs">
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-dashed border-slate-200">
+                <section className="glass-panel rounded-3xl p-4 sm:p-6 shadow-lg">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-dashed border-white/30">
                     <div>
                       <h2 className="text-sm sm:text-base font-extrabold text-slate-900 font-display flex items-center gap-1.5">
                         <Car className="w-4 h-4 text-[#00AED6] shrink-0" />
@@ -3116,7 +3229,7 @@ export default function App() {
                       </p>
                     </div>
                     {summary.computedTravel > 0 && (
-                      <span className="px-2.5 py-1 rounded-full bg-[#00AED6]/10 text-[#00AED6] text-xs font-mono tabular-nums font-extrabold">
+                      <span className="glass-badge px-2.5 py-1 text-[#00AED6] bg-[#00AED6]/10 border-[#00AED6]/30 text-xs font-mono tabular-nums font-extrabold">
                         Total: {formatRupiah(summary.computedTravel)}
                       </span>
                     )}
@@ -3124,7 +3237,7 @@ export default function App() {
 
                   {/* Quick Preset Chips for Common Transport */}
                   <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[11px] font-semibold text-slate-400 mr-1">
+                    <span className="text-[11px] font-semibold text-slate-500 mr-1">
                       Isi cepat:
                     </span>
                     {[
@@ -3139,10 +3252,10 @@ export default function App() {
                         key={preset}
                         type="button"
                         onClick={() => setNewTravelName(preset)}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors ${
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${
                           newTravelName === preset
-                            ? 'bg-[#00AED6] text-white border-[#00AED6]'
-                            : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'
+                            ? 'glass-button-prominent text-white shadow-2xs'
+                            : 'glass-button-standard text-slate-700'
                         }`}
                       >
                         + {preset}
@@ -3160,7 +3273,7 @@ export default function App() {
                       value={newTravelName}
                       onChange={(e) => setNewTravelName(e.target.value)}
                       placeholder="Rute / transportasi (cth: Gojek Pergi, Grab Pulang, Parkir)..."
-                      className="w-full sm:col-span-6 min-h-[44px] px-3.5 py-2 rounded-2xl border border-slate-300 text-xs font-medium text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                      className="glass-input w-full sm:col-span-6 min-h-[44px] px-3.5 py-2 rounded-2xl text-xs font-medium text-slate-800"
                     />
                     <div className="grid grid-cols-12 gap-2 sm:col-span-6">
                       <input
@@ -3170,11 +3283,11 @@ export default function App() {
                         value={newTravelAmount}
                         onChange={(e) => setNewTravelAmount(e.target.value)}
                         placeholder="Total biaya (Rp)"
-                        className="col-span-7 min-h-[44px] px-3 py-2 rounded-2xl border border-slate-300 text-xs font-mono text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                        className="glass-input col-span-7 min-h-[44px] px-3 py-2 rounded-2xl text-xs font-mono text-slate-800"
                       />
                       <button
                         type="submit"
-                        className="col-span-5 min-h-[44px] px-3 py-2 rounded-full bg-[#00880D] hover:bg-[#00700B] active:scale-[0.98] text-white text-xs font-extrabold flex items-center justify-center gap-1 transition-all whitespace-nowrap"
+                        className="col-span-5 min-h-[44px] px-3 py-2 rounded-full glass-button-success text-xs font-extrabold flex items-center justify-center gap-1 transition-all whitespace-nowrap shadow-sm"
                       >
                         <Plus className="w-4 h-4" />
                         <span>Tambah</span>
@@ -3184,7 +3297,7 @@ export default function App() {
 
                   {/* Travel Items List */}
                   {!activeBill.travelItems || activeBill.travelItems.length === 0 ? (
-                    <div className="mt-4 p-4 rounded-2xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
+                    <div className="mt-4 p-4 rounded-2xl border border-dashed border-slate-300/60 text-center text-xs text-slate-400">
                       Belum ada biaya perjalanan. Tambahkan ongkos Gojek/Grab, bensin, tol, atau parkir di sini agar tidak tercampur dengan daftar menu makanan.
                     </div>
                   ) : (
@@ -3202,7 +3315,7 @@ export default function App() {
                         return (
                           <div
                             key={trip.id}
-                            className="p-3.5 rounded-2xl border border-sky-200/80 bg-sky-50/40 space-y-2.5"
+                            className="p-3.5 rounded-2xl glass-card border border-[#00AED6]/30 bg-[#00AED6]/[0.03] space-y-2.5 shadow-xs"
                           >
                             {/* Row 1: Trip Name & Nominal + Delete */}
                             <div className="flex items-center justify-between gap-2">
@@ -3222,7 +3335,7 @@ export default function App() {
                                       ),
                                     }))
                                   }
-                                  className="flex-1 min-w-0 bg-transparent text-sm font-extrabold text-slate-900 focus:bg-white focus:px-2 py-0.5 rounded-md focus:outline-none focus:ring-1 focus:ring-[#00AED6]"
+                                  className="flex-1 min-w-0 bg-transparent text-sm font-extrabold text-slate-900 focus:bg-white/70 focus:px-2 py-0.5 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00AED6]/60 transition-all"
                                 />
                               </div>
 
@@ -3247,12 +3360,12 @@ export default function App() {
                                       ),
                                     }));
                                   }}
-                                  className="w-28 min-h-[36px] px-2.5 py-1 rounded-xl border border-slate-300 bg-white text-xs font-mono tabular-nums font-bold text-right"
+                                  className="glass-input w-28 min-h-[36px] px-2.5 py-1 rounded-xl text-xs font-mono tabular-nums font-bold text-right"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveTravelItem(trip.id)}
-                                  className="min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-red-600 rounded-full transition-colors shrink-0"
+                                  className="min-h-[34px] min-w-[34px] flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors shrink-0"
                                   title="Hapus biaya perjalanan"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -3262,7 +3375,7 @@ export default function App() {
 
                             {/* Row 2: Participant Assignment Bubbles for this Trip */}
                             {activeBill.participants.length > 0 && (
-                              <div className="pt-2.5 border-t border-dashed border-sky-200/80 space-y-2">
+                              <div className="pt-2.5 border-t border-dashed border-white/30 space-y-2">
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <button
                                     type="button"
@@ -3272,8 +3385,8 @@ export default function App() {
                                     className={`min-h-[34px] px-3 py-1 rounded-full text-xs font-bold transition-all ${
                                       (trip.assignedTo || []).length ===
                                       activeBill.participants.length
-                                        ? 'bg-[#00AED6] text-white'
-                                        : 'bg-white border border-slate-200 text-slate-600'
+                                        ? 'glass-button-prominent shadow-xs'
+                                        : 'glass-button-standard text-slate-600'
                                     }`}
                                   >
                                     Semua Ikut
@@ -3294,8 +3407,8 @@ export default function App() {
                                         }
                                         className={`min-h-[34px] pl-1.5 pr-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all active:scale-[0.97] ${
                                           isSelected
-                                            ? 'bg-[#00880D] text-white shadow-2xs'
-                                            : 'bg-white border border-slate-200 text-slate-600 opacity-80'
+                                            ? 'glass-button-success shadow-xs'
+                                            : 'glass-button-standard text-slate-700 opacity-80'
                                         }`}
                                       >
                                         <span
@@ -3342,7 +3455,7 @@ export default function App() {
                         setMobileEditorTab('summary');
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
-                      className="w-full min-h-[48px] py-3 px-5 rounded-full bg-[#00AED6] text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-xs active:scale-[0.98] transition-transform"
+                      className="w-full min-h-[48px] py-3 px-5 rounded-full glass-button-prominent text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform"
                     >
                       <Wallet className="w-4 h-4" />
                       <span>Lihat Rincian Tagihan Per Teman & QRIS</span>
@@ -3358,9 +3471,9 @@ export default function App() {
                 }`}
               >
                 {/* Per-Participant Split Bill Card */}
-                <section className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-2xs">
-                  <div className="flex items-center justify-between pb-3.5 border-b border-dashed border-slate-200">
-                    <div>
+                <section className="glass-panel rounded-3xl p-4 sm:p-6 shadow-lg">
+                  <div className="flex items-center justify-between gap-3 pb-3.5 border-b border-dashed border-white/30">
+                    <div className="min-w-0">
                       <h2 className="text-sm sm:text-base font-extrabold text-slate-900 font-display">
                         Rincian Patungan Per Teman
                       </h2>
@@ -3368,13 +3481,15 @@ export default function App() {
                         Rincian menu makanan, pajak, dan patungan perjalanan terpisah
                       </p>
                     </div>
-                    <span className="text-xs font-mono tabular-nums font-extrabold text-[#00880D]">
-                      {summary.paidCount}/{activeBill.participants.length} Lunas
-                    </span>
+                    {activeBill.participants.length > 0 && (
+                      <span className="glass-badge shrink-0 px-2.5 py-1 rounded-full text-xs font-mono tabular-nums font-extrabold text-[#00880D] bg-[#00880D]/10 border-[#00880D]/30 whitespace-nowrap">
+                        {summary.paidCount}/{activeBill.participants.length} Lunas
+                      </span>
+                    )}
                   </div>
 
                   {summary.participantBreakdowns.length === 0 ? (
-                    <div className="mt-4 p-6 rounded-2xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
+                    <div className="mt-4 p-6 rounded-2xl border border-dashed border-slate-300/60 text-center text-xs text-slate-400">
                       Tambahkan teman dan menu pesanan terlebih dahulu untuk melihat hasil bagi tagihan otomatis di sini.
                     </div>
                   ) : (
@@ -3389,12 +3504,12 @@ export default function App() {
                         return (
                           <div
                             key={b.participant.id}
-                            className="p-3.5 sm:p-4 rounded-2xl border border-slate-200 hover:border-[#00AED6] transition-colors bg-white"
+                            className="p-3.5 sm:p-4 rounded-2xl glass-card transition-all shadow-xs"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                 <div
-                                  className={`w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-xs shrink-0 ${getAvatarColor(
+                                  className={`w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-xs shrink-0 shadow-xs ${getAvatarColor(
                                     idx
                                   )}`}
                                 >
@@ -3408,13 +3523,13 @@ export default function App() {
                                     <span>{b.items.length} menu</span>
                                     {b.travelItems.length > 0 && (
                                       <>
-                                        <span aria-hidden="true">·</span>
+                                        <span aria-hidden="true" className="text-slate-400">·</span>
                                         <span className="text-[#00AED6] font-semibold">
                                           {b.travelItems.length} perjalanan
                                         </span>
                                       </>
                                     )}
-                                    <span aria-hidden="true">·</span>
+                                    <span aria-hidden="true" className="text-slate-400">·</span>
                                     {isPaid ? (
                                       <span className="text-[#00880D] font-bold">
                                         Lunas ({b.participant.paidVia || 'Transfer'})
@@ -3436,8 +3551,8 @@ export default function App() {
                             </div>
 
                             {(b.taxShare > 0 || b.travelShare > 0) && (
-                              <div className="mt-2 pt-2 border-t border-slate-100 text-[11px] font-mono tabular-nums text-slate-400 flex flex-wrap items-center justify-between gap-1">
-                                <span className="text-slate-500 font-medium">Porsi:</span>
+                              <div className="mt-2 pt-2 border-t border-white/20 text-[11px] font-mono tabular-nums text-slate-500 flex flex-wrap items-center justify-between gap-1">
+                                <span className="text-slate-600 font-medium">Porsi:</span>
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <span>Menu {formatRupiah(b.subtotal)}</span>
                                   {b.taxShare > 0 && (
@@ -3458,7 +3573,7 @@ export default function App() {
                               b.serviceShare > 0 ||
                               b.deliveryShare > 0 ||
                               b.discountShare > 0) && (
-                              <div className="mt-2.5 pt-2.5 border-t border-dashed border-slate-100 text-xs text-slate-600 space-y-1">
+                              <div className="mt-2.5 pt-2.5 border-t border-dashed border-white/20 text-xs text-slate-700 space-y-1">
                                 {b.items.map((it, i) => (
                                   <div
                                     key={i}
@@ -3473,7 +3588,7 @@ export default function App() {
                                         </span>
                                       )}
                                     </span>
-                                    <span className="font-mono tabular-nums text-slate-700 shrink-0">
+                                    <span className="font-mono tabular-nums text-slate-800 font-medium shrink-0">
                                       {formatRupiah(it.shareAmount)}
                                     </span>
                                   </div>
@@ -3484,9 +3599,9 @@ export default function App() {
                                   b.deliveryShare > 0 ||
                                   b.discountShare > 0 ||
                                   b.travelItems.length > 0) && (
-                                  <div className="pt-1.5 mt-1.5 border-t border-slate-100 space-y-1">
+                                  <div className="pt-1.5 mt-1.5 border-t border-white/20 space-y-1">
                                     {b.items.length > 0 && (
-                                      <div className="flex items-center justify-between gap-2 text-slate-500">
+                                      <div className="flex items-center justify-between gap-2 text-slate-600">
                                         <span>Subtotal Pesanan Makanan</span>
                                         <span className="font-mono tabular-nums">
                                           {formatRupiah(b.subtotal)}
@@ -3494,7 +3609,7 @@ export default function App() {
                                       </div>
                                     )}
                                     {b.taxShare > 0 && (
-                                      <div className="flex items-center justify-between gap-2 text-slate-700 font-medium">
+                                      <div className="flex items-center justify-between gap-2 text-slate-800 font-medium">
                                         <span>+ Pajak Resto (PB1 / PPN)</span>
                                         <span className="font-mono tabular-nums">
                                           +{formatRupiah(b.taxShare)}
@@ -3527,7 +3642,7 @@ export default function App() {
                                     )}
 
                                     {b.travelItems.length > 0 && (
-                                      <div className="pt-1.5 mt-1.5 border-t border-dashed border-sky-200/80 space-y-1">
+                                      <div className="pt-1.5 mt-1.5 border-t border-dashed border-[#00AED6]/30 space-y-1">
                                         <div className="text-[11px] font-bold text-[#00AED6] flex items-center gap-1">
                                           <Car className="w-3 h-3" />
                                           <span>Biaya Perjalanan (Di Luar Struk):</span>
@@ -3559,7 +3674,7 @@ export default function App() {
                             )}
 
                             {/* Touch-Friendly Action Buttons per Participant */}
-                            <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                            <div className="mt-3 pt-2.5 border-t border-white/20 flex items-center justify-between gap-2">
                               <div className="flex items-center gap-1.5">
                                 <button
                                   type="button"
@@ -3569,7 +3684,7 @@ export default function App() {
                                       `link-${b.participant.id}`
                                     )
                                   }
-                                  className="min-h-[38px] px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 transition-colors whitespace-nowrap"
+                                  className="min-h-[38px] px-3 py-1.5 rounded-full glass-button-standard text-xs font-bold flex items-center gap-1 transition-all whitespace-nowrap shadow-2xs"
                                 >
                                   {copiedId === `link-${b.participant.id}` ? (
                                     <>
@@ -3593,11 +3708,11 @@ export default function App() {
                                         `remind-${b.participant.id}`
                                       )
                                     }
-                                    className="min-h-[38px] px-3 py-1.5 rounded-full bg-[#00AED6]/10 hover:bg-[#00AED6]/20 text-[#00AED6] text-xs font-bold flex items-center gap-1 transition-colors whitespace-nowrap"
+                                    className="min-h-[38px] px-3 py-1.5 rounded-full glass-button-prominent text-xs font-bold flex items-center gap-1 transition-all whitespace-nowrap shadow-xs"
                                   >
                                     {copiedId === `remind-${b.participant.id}` ? (
                                       <>
-                                        <Check className="w-3.5 h-3.5 text-[#00880D]" />
+                                        <Check className="w-3.5 h-3.5 text-white" />
                                         <span>Teks Disalin</span>
                                       </>
                                     ) : (
@@ -3614,7 +3729,7 @@ export default function App() {
                                       setPortalParticipantId(b.participant.id);
                                       setViewMode('portal');
                                     }}
-                                    className="min-h-[38px] px-3 py-1.5 rounded-full bg-[#00880D]/10 text-[#00880D] text-xs font-bold flex items-center gap-1 transition-colors whitespace-nowrap"
+                                    className="min-h-[38px] px-3 py-1.5 rounded-full glass-badge bg-[#00880D]/10 text-[#00880D] border-[#00880D]/30 text-xs font-bold flex items-center gap-1 transition-all whitespace-nowrap"
                                   >
                                     <FileCheck2 className="w-3.5 h-3.5" />
                                     <span>Bukti Lunas</span>
@@ -3628,7 +3743,7 @@ export default function App() {
                                   setPortalParticipantId(b.participant.id);
                                   setViewMode('portal');
                                 }}
-                                className="min-h-[38px] px-3 py-1.5 rounded-full text-xs font-bold text-[#00880D] hover:bg-[#00880D]/10 flex items-center gap-1 transition-colors whitespace-nowrap"
+                                className="min-h-[38px] px-3 py-1.5 rounded-full text-xs font-bold text-[#00880D] hover:bg-[#00880D]/10 flex items-center gap-1 transition-all whitespace-nowrap"
                               >
                                 <span>Buka Link</span>
                                 <ExternalLink className="w-3.5 h-3.5" />
@@ -3646,7 +3761,7 @@ export default function App() {
                       type="button"
                       disabled={activeBill.participants.length === 0}
                       onClick={() => setIsShareOpen(true)}
-                      className="w-full min-h-[48px] py-3 px-5 rounded-full bg-[#00880D] hover:bg-[#00700B] active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-all shadow-xs"
+                      className="w-full min-h-[48px] py-3 px-5 rounded-full glass-button-success disabled:opacity-40 text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-all shadow-md"
                     >
                       <Share2 className="w-4 h-4" />
                       <span>Bagikan Link Split Bill</span>
@@ -3659,7 +3774,7 @@ export default function App() {
                         setPortalParticipantId(undefined);
                         setViewMode('portal');
                       }}
-                      className="w-full min-h-[44px] py-2.5 px-4 rounded-full border border-slate-300 hover:bg-slate-50 disabled:opacity-50 text-slate-800 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+                      className="w-full min-h-[44px] py-2.5 px-4 rounded-full glass-button-standard disabled:opacity-40 text-slate-800 font-bold text-xs flex items-center justify-center gap-2 transition-all"
                     >
                       <ExternalLink className="w-4 h-4 text-[#00AED6]" />
                       <span>Lihat Halaman Link Pembayaran</span>
@@ -3668,7 +3783,7 @@ export default function App() {
                 </section>
 
                 {/* Creator QRIS & Bank Accounts Section */}
-                <section className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-2xs">
+                <section className="glass-panel rounded-3xl p-4 sm:p-6 shadow-lg">
                   <input
                     ref={qrisUploadInputRef}
                     type="file"
@@ -3677,7 +3792,7 @@ export default function App() {
                     className="hidden"
                   />
 
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3.5 border-b border-slate-100">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3.5 border-b border-white/20">
                     <div>
                       <h2 className="text-sm sm:text-base font-extrabold text-slate-900 font-display flex items-center gap-1.5">
                         <Wallet className="w-4 h-4 text-[#00AED6]" />
@@ -3694,7 +3809,7 @@ export default function App() {
                           setUploadingQrisChannelId('__QUICK_QRIS__');
                           qrisUploadInputRef.current?.click();
                         }}
-                        className="min-h-[38px] px-3 py-1.5 rounded-full bg-[#00AED6]/10 hover:bg-[#00AED6]/20 text-[#00AED6] text-xs font-extrabold flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                        className="min-h-[38px] px-3.5 py-1.5 rounded-full glass-button-prominent text-xs font-extrabold flex items-center gap-1.5 transition-all whitespace-nowrap shadow-xs"
                       >
                         <QrCode className="w-3.5 h-3.5" />
                         <span>Unggah QRIS Saya</span>
@@ -3702,7 +3817,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => setShowAddChannel(!showAddChannel)}
-                        className="min-h-[38px] px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-800 flex items-center gap-1 transition-colors whitespace-nowrap"
+                        className="min-h-[38px] px-3 py-1.5 rounded-full glass-button-standard text-xs font-bold text-slate-800 flex items-center gap-1 transition-all whitespace-nowrap"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Tambah</span>
@@ -3713,7 +3828,7 @@ export default function App() {
                   {showAddChannel && (
                     <form
                       onSubmit={handleAddPaymentChannel}
-                      className="mt-4 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5"
+                      className="mt-4 p-3.5 rounded-2xl glass-card space-y-2.5 shadow-xs"
                     >
                       <div className="grid grid-cols-2 gap-2">
                         <select
@@ -3723,7 +3838,7 @@ export default function App() {
                               e.target.value as PaymentChannel['provider']
                             )
                           }
-                          className="min-h-[42px] px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold"
+                          className="glass-input min-h-[42px] px-3 py-2 rounded-xl text-xs font-bold"
                         >
                           <option value="QRIS">QRIS</option>
                           <option value="BCA">BCA</option>
@@ -3744,26 +3859,26 @@ export default function App() {
                               ? 'Nama Merchant / QRIS'
                               : 'Nomor Rekening / E-Wallet'
                           }
-                          className="min-h-[42px] px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-mono"
+                          className="glass-input min-h-[42px] px-3 py-2 rounded-xl text-xs font-mono"
                         />
                       </div>
 
                       {newChannelProvider === 'QRIS' && (
-                        <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white border border-slate-200">
+                        <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl glass-card">
                           <div className="flex items-center gap-2.5 min-w-0">
                             {newChannelQrisImage ? (
                               <img
                                 src={newChannelQrisImage}
                                 alt="Pratinjau QRIS"
                                 referrerPolicy="no-referrer"
-                                className="w-10 h-10 rounded object-contain border border-slate-200 shrink-0"
+                                className="w-10 h-10 rounded object-contain border border-slate-200/60 shrink-0 bg-white"
                               />
                             ) : (
-                              <div className="w-9 h-9 rounded bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+                              <div className="w-9 h-9 rounded bg-white/60 flex items-center justify-center text-slate-600 shrink-0">
                                 <QrCode className="w-4 h-4" />
                               </div>
                             )}
-                            <span className="text-xs text-slate-600 truncate">
+                            <span className="text-xs text-slate-700 truncate font-medium">
                               {newChannelQrisImage
                                 ? 'Gambar QRIS siap disimpan'
                                 : 'Pilih gambar kode QRIS pribadi Anda'}
@@ -3775,7 +3890,7 @@ export default function App() {
                               setUploadingQrisChannelId('__NEW_CHANNEL__');
                               qrisUploadInputRef.current?.click();
                             }}
-                            className="min-h-[36px] px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-800 flex items-center gap-1 whitespace-nowrap shrink-0"
+                            className="min-h-[36px] px-3 py-1.5 rounded-full glass-button-standard text-xs font-bold text-slate-800 flex items-center gap-1 whitespace-nowrap shrink-0"
                           >
                             <Upload className="w-3.5 h-3.5" />
                             <span>{newChannelQrisImage ? 'Ganti' : 'Pilih'}</span>
@@ -3789,11 +3904,11 @@ export default function App() {
                           value={newChannelHolder}
                           onChange={(e) => setNewChannelHolder(e.target.value)}
                           placeholder="Atas Nama Pemilik Rekening / QRIS"
-                          className="flex-1 min-h-[42px] px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs"
+                          className="glass-input flex-1 min-h-[42px] px-3 py-2 rounded-xl text-xs"
                         />
                         <button
                           type="submit"
-                          className="min-h-[42px] px-4 py-2 rounded-full bg-[#00880D] text-white text-xs font-bold whitespace-nowrap"
+                          className="min-h-[42px] px-4 py-2 rounded-full glass-button-success text-white text-xs font-bold whitespace-nowrap shadow-xs"
                         >
                           Simpan
                         </button>
@@ -3802,7 +3917,7 @@ export default function App() {
                   )}
 
                   {activeBill.paymentChannels.length === 0 ? (
-                    <div className="mt-4 p-5 rounded-2xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
+                    <div className="mt-4 p-5 rounded-2xl border border-dashed border-slate-300/60 text-center text-xs text-slate-400">
                       Belum ada metode pembayaran. Ketuk <strong>Unggah QRIS Saya</strong> untuk menampilkan kode QRIS Anda di halaman pembayaran teman.
                     </div>
                   ) : (
@@ -3810,7 +3925,7 @@ export default function App() {
                       {activeBill.paymentChannels.map((ch) => (
                         <div
                           key={ch.id}
-                          className="p-3.5 rounded-2xl border border-slate-200 space-y-2.5"
+                          className="p-3.5 rounded-2xl glass-card space-y-2.5 shadow-xs"
                         >
                           <div className="flex items-center justify-between gap-2">
                             <div className="min-w-0">
@@ -3830,7 +3945,7 @@ export default function App() {
                                     setUploadingQrisChannelId(ch.id);
                                     qrisUploadInputRef.current?.click();
                                   }}
-                                  className="min-h-[34px] px-2.5 py-1 rounded-full border border-slate-300 bg-white text-xs font-bold text-slate-700 flex items-center gap-1 whitespace-nowrap"
+                                  className="min-h-[34px] px-2.5 py-1 rounded-full glass-button-standard text-xs font-bold text-slate-700 flex items-center gap-1 whitespace-nowrap"
                                 >
                                   <Upload className="w-3 h-3" />
                                   <span>{ch.qrisImageUrl ? 'Ganti' : 'QRIS'}</span>
@@ -3849,10 +3964,10 @@ export default function App() {
                                     ),
                                   }))
                                 }
-                                className={`min-h-[34px] px-2.5 py-1 rounded-full text-xs font-bold transition-colors ${
+                                className={`min-h-[32px] px-3 py-1 rounded-full text-xs font-bold transition-all ${
                                   ch.enabled
-                                    ? 'bg-[#00880D]/10 text-[#00880D]'
-                                    : 'bg-slate-100 text-slate-400'
+                                    ? 'glass-badge text-[#00880D] bg-[#00880D]/10 border-[#00880D]/30'
+                                    : 'glass-button-standard text-slate-500'
                                 }`}
                               >
                                 {ch.enabled ? 'Aktif' : 'Off'}
@@ -3867,7 +3982,7 @@ export default function App() {
                                     ),
                                   }))
                                 }
-                                className="min-h-[34px] min-w-[34px] flex items-center justify-center text-slate-400 hover:text-red-600"
+                                className="min-h-[32px] min-w-[32px] flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
                                 title="Hapus metode pembayaran"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -3876,13 +3991,13 @@ export default function App() {
                           </div>
 
                           {ch.provider === 'QRIS' && ch.qrisImageUrl && (
-                            <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-3">
+                            <div className="pt-2.5 border-t border-white/20 flex items-center justify-between gap-3">
                               <div className="flex items-center gap-2.5 min-w-0">
                                 <img
                                   src={ch.qrisImageUrl}
                                   alt="QRIS Saya"
                                   referrerPolicy="no-referrer"
-                                  className="w-12 h-12 rounded-lg object-contain border border-slate-200 bg-white p-0.5 shrink-0"
+                                  className="w-12 h-12 rounded-lg object-contain border border-slate-200/60 bg-white p-0.5 shrink-0 shadow-2xs"
                                 />
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -3890,7 +4005,7 @@ export default function App() {
                                       Gambar QRIS Terpasang
                                     </span>
                                     {ch.qrisRawString && (
-                                      <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 inline-flex items-center gap-0.5">
+                                      <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-100/80 text-emerald-800 border border-emerald-300 inline-flex items-center gap-0.5">
                                         ⚡ Dinamis Aktif
                                       </span>
                                     )}
@@ -3915,7 +4030,7 @@ export default function App() {
                                     ),
                                   }))
                                 }
-                                className="text-xs text-slate-400 hover:text-red-600 px-2 py-1 shrink-0"
+                                className="text-xs text-slate-400 hover:text-red-500 px-2 py-1 shrink-0 transition-colors"
                               >
                                 Hapus
                               </button>
@@ -3932,12 +4047,12 @@ export default function App() {
         )}
       </main>
 
-      {/* Fixed Bottom Thumb-Zone Navigation Bar for Mobile & Tablet (< lg) */}
+      {/* GlassyUI Floating Bottom Dock Navigation Bar for Mobile & Tablet (< lg) */}
       <nav
         aria-label="Navigasi Utama Mobile"
-        className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 grid ${
+        className={`lg:hidden fixed bottom-3 left-3 right-3 sm:left-6 sm:right-6 max-w-lg mx-auto z-40 glass-dock rounded-3xl grid ${
           canEditActiveBill ? 'grid-cols-4' : 'grid-cols-3'
-        } items-center h-16 px-2`}
+        } items-center h-16 px-2 shadow-2xl relative`}
       >
         {canEditActiveBill ? (
           <>
@@ -3947,14 +4062,23 @@ export default function App() {
                 setViewMode('editor');
                 setMobileEditorTab('input');
               }}
-              className={`min-h-[48px] flex flex-col items-center justify-center rounded-xl transition-colors ${
+              className={`relative min-h-[46px] flex flex-col items-center justify-center rounded-2xl transition-colors ${
                 viewMode === 'editor' && mobileEditorTab === 'input'
-                  ? 'text-[#00AED6] font-extrabold'
-                  : 'text-slate-500 font-medium'
+                  ? 'font-extrabold text-slate-900'
+                  : 'text-slate-600 hover:text-slate-900 font-medium'
               }`}
             >
-              <Receipt className="w-5 h-5" />
-              <span className="text-[10px] tracking-tight mt-0.5">Isi Struk</span>
+              {viewMode === 'editor' && mobileEditorTab === 'input' && (
+                <motion.div
+                  layoutId="mobile-dock-pill"
+                  className="glass-tab-pill-white"
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+              <span className="relative z-10 flex flex-col items-center">
+                <Receipt className="w-5 h-5 text-[#00AED6]" />
+                <span className="text-[10px] tracking-tight mt-0.5">Isi Struk</span>
+              </span>
             </button>
 
             <button
@@ -3963,15 +4087,24 @@ export default function App() {
                 setViewMode('editor');
                 setMobileEditorTab('summary');
               }}
-              className={`min-h-[48px] flex flex-col items-center justify-center rounded-xl transition-colors ${
+              className={`relative min-h-[46px] flex flex-col items-center justify-center rounded-2xl transition-colors ${
                 viewMode === 'editor' && mobileEditorTab === 'summary'
-                  ? 'text-[#00AED6] font-extrabold'
-                  : 'text-slate-500 font-medium'
+                  ? 'font-extrabold text-slate-900'
+                  : 'text-slate-600 hover:text-slate-900 font-medium'
               }`}
             >
-              <Wallet className="w-5 h-5" />
-              <span className="text-[10px] tracking-tight mt-0.5">
-                Rincian & QRIS
+              {viewMode === 'editor' && mobileEditorTab === 'summary' && (
+                <motion.div
+                  layoutId="mobile-dock-pill"
+                  className="glass-tab-pill-white"
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+              <span className="relative z-10 flex flex-col items-center">
+                <Wallet className="w-5 h-5 text-[#00AED6]" />
+                <span className="text-[10px] tracking-tight mt-0.5">
+                  Rincian & QRIS
+                </span>
               </span>
             </button>
           </>
@@ -3979,11 +4112,13 @@ export default function App() {
           <button
             type="button"
             onClick={handleCreateNewBill}
-            className="min-h-[48px] flex flex-col items-center justify-center rounded-xl text-slate-500 font-medium transition-colors"
+            className="relative min-h-[46px] flex flex-col items-center justify-center rounded-2xl text-slate-600 font-medium transition-colors"
           >
-            <FilePlus2 className="w-5 h-5" />
-            <span className="text-[10px] tracking-tight mt-0.5">
-              Buat Struk Sendiri
+            <span className="relative z-10 flex flex-col items-center">
+              <FilePlus2 className="w-5 h-5 text-[#00AED6]" />
+              <span className="text-[10px] tracking-tight mt-0.5">
+                Buat Struk Sendiri
+              </span>
             </span>
           </button>
         )}
@@ -3994,14 +4129,23 @@ export default function App() {
             setPortalParticipantId(undefined);
             setViewMode('portal');
           }}
-          className={`min-h-[48px] flex flex-col items-center justify-center rounded-xl transition-colors ${
+          className={`relative min-h-[46px] flex flex-col items-center justify-center rounded-2xl transition-colors ${
             viewMode === 'portal'
-              ? 'text-[#00880D] font-extrabold'
-              : 'text-slate-500 font-medium'
+              ? 'font-extrabold text-slate-900'
+              : 'text-slate-600 hover:text-slate-900 font-medium'
           }`}
         >
-          <ExternalLink className="w-5 h-5" />
-          <span className="text-[10px] tracking-tight mt-0.5">Link Bayar</span>
+          {viewMode === 'portal' && (
+            <motion.div
+              layoutId="mobile-dock-pill"
+              className="glass-tab-pill-white"
+              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+            />
+          )}
+          <span className="relative z-10 flex flex-col items-center">
+            <ExternalLink className="w-5 h-5 text-[#00880D]" />
+            <span className="text-[10px] tracking-tight mt-0.5">Link Bayar</span>
+          </span>
         </button>
 
         <button
@@ -4010,15 +4154,22 @@ export default function App() {
             syncBillsFromServer(currentUser);
             setViewMode('saved');
           }}
-          className={`min-h-[48px] flex flex-col items-center justify-center rounded-xl transition-colors ${
+          className={`relative min-h-[46px] flex flex-col items-center justify-center rounded-2xl transition-colors ${
             viewMode === 'saved'
-              ? 'text-[#00AED6] font-extrabold'
-              : 'text-slate-500 font-medium'
+              ? 'font-extrabold text-slate-900'
+              : 'text-slate-600 hover:text-slate-900 font-medium'
           }`}
         >
-          <History className="w-5 h-5" />
-          <span className="text-[10px] tracking-tight mt-0.5">
-            Riwayat ({savedBills.length})
+          {viewMode === 'saved' && (
+            <motion.div
+              layoutId="mobile-dock-pill"
+              className="glass-tab-pill-white"
+              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+            />
+          )}
+          <span className="relative z-10 flex flex-col items-center">
+            <History className="w-5 h-5 text-[#00AED6]" />
+            <span className="text-[10px] tracking-tight mt-0.5">Riwayat</span>
           </span>
         </button>
       </nav>

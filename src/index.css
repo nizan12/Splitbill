@@ -27,3 +27,414 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* ==========================================================================
+   GLASSY UI DESIGN SYSTEM (https://github.com/alexburlis/glassyui)
+   Polished glass components with refraction, specular rims, bevel highlights,
+   and dynamic ambient depth.
+   ========================================================================== */
+
+:root {
+  --lg-glass-blur: 16px;
+  --lg-glass-sat: 165%;
+  --lg-glass-contrast: 98%;
+  --lg-glass-brightness: 103%;
+  --lg-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --lg-prominent-cyan: #00AED6;
+  --lg-prominent-blue: #0067D9;
+  --lg-emerald: #00880D;
+}
+
+/* Ambient glow orbs in background so glass has luminous colors to refract */
+.glassy-ambient-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.glassy-orb-1 {
+  position: absolute;
+  top: -8%;
+  left: 15%;
+  width: 480px;
+  height: 480px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(0, 174, 214, 0.16) 0%, rgba(0, 174, 214, 0) 70%);
+  filter: blur(60px);
+  animation: glassy-float 22s ease-in-out infinite alternate;
+}
+
+.glassy-orb-2 {
+  position: absolute;
+  top: 35%;
+  right: -5%;
+  width: 550px;
+  height: 550px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.13) 0%, rgba(99, 102, 241, 0) 70%);
+  filter: blur(70px);
+  animation: glassy-float 28s ease-in-out infinite alternate-reverse;
+}
+
+.glassy-orb-3 {
+  position: absolute;
+  bottom: 5%;
+  left: 5%;
+  width: 520px;
+  height: 520px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.11) 0%, rgba(16, 185, 129, 0) 70%);
+  filter: blur(65px);
+  animation: glassy-float 25s ease-in-out infinite alternate;
+}
+
+.glassy-orb-4 {
+  position: absolute;
+  top: 70%;
+  right: 25%;
+  width: 420px;
+  height: 420px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.08) 0%, rgba(244, 63, 94, 0) 70%);
+  filter: blur(65px);
+  animation: glassy-float 20s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes glassy-float {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(25px, -20px, 0) scale(1.05);
+  }
+  100% {
+    transform: translate3d(-20px, 25px, 0) scale(0.96);
+  }
+}
+
+/* Glass Surface / Glass Panel */
+.glass-panel {
+  position: relative;
+  background: rgba(255, 255, 255, 0.72);
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(255, 255, 255, 0.15) 35%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  -webkit-backdrop-filter: blur(var(--lg-glass-blur)) saturate(var(--lg-glass-sat)) brightness(var(--lg-glass-brightness));
+  backdrop-filter: blur(var(--lg-glass-blur)) saturate(var(--lg-glass-sat)) brightness(var(--lg-glass-brightness));
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow:
+    inset 0 0 16px -4px rgba(255, 255, 255, 0.75),
+    inset 1.5px 2px 0 0 rgba(255, 255, 255, 0.95),
+    inset -1px -1.5px 0 0 rgba(255, 255, 255, 0.4),
+    inset 2px 0 3px -1px rgba(80, 160, 255, 0.12),
+    inset -2px 0 3px -1px rgba(255, 90, 150, 0.08),
+    0 10px 35px -10px rgba(15, 23, 42, 0.08),
+    0 2px 6px -1px rgba(15, 23, 42, 0.03);
+}
+
+/* Glass Card - for inner items, table rows, participant chips */
+.glass-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.65);
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.85),
+    inset -1px -1px 0 0 rgba(255, 255, 255, 0.35),
+    0 4px 18px -4px rgba(15, 23, 42, 0.05),
+    0 1px 3px rgba(15, 23, 42, 0.02);
+  transition: all 0.22s var(--lg-spring);
+}
+
+.glass-card-interactive:hover {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 1),
+    0 12px 28px -6px rgba(15, 23, 42, 0.1),
+    0 2px 6px rgba(15, 23, 42, 0.04);
+  transform: translateY(-1.5px);
+}
+
+/* Glassy Active Card - highlighted state */
+.glass-card-active {
+  background: rgba(0, 174, 214, 0.06);
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(0, 174, 214, 0.04) 100%
+  );
+  border: 1.5px solid rgba(0, 174, 214, 0.7);
+  box-shadow:
+    inset 0 0 12px -2px rgba(0, 174, 214, 0.25),
+    inset 1.5px 1.5px 0 0 rgba(255, 255, 255, 0.9),
+    0 8px 24px -4px rgba(0, 174, 214, 0.18),
+    0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+/* Glassy Prominent Button (GlassyUI signature cyan/blue glass button) */
+.glass-button-prominent {
+  position: relative;
+  background: linear-gradient(135deg, #00AED6 0%, #0099BD 100%);
+  color: #FFFFFF;
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow:
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1.5px 1px 0 rgba(0, 0, 0, 0.18),
+    inset 0 0 12px rgba(255, 255, 255, 0.18),
+    0 8px 24px -4px rgba(0, 174, 214, 0.42),
+    0 2px 6px rgba(15, 23, 42, 0.08);
+  transition: all 0.2s var(--lg-spring);
+}
+
+.glass-button-prominent:hover {
+  background: linear-gradient(135deg, #00B8E1 0%, #00A3C9 100%);
+  box-shadow:
+    inset 0 2px 1.5px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -1.5px 1px 0 rgba(0, 0, 0, 0.2),
+    0 12px 28px -4px rgba(0, 174, 214, 0.52),
+    0 4px 8px rgba(15, 23, 42, 0.1);
+  transform: translateY(-1px);
+}
+
+.glass-button-prominent:active {
+  transform: scale(0.98);
+  box-shadow:
+    inset 0 1px 1px 0 rgba(0, 0, 0, 0.2),
+    0 4px 12px rgba(0, 174, 214, 0.3);
+}
+
+/* Glassy Success Button (Lush Emerald glass) */
+.glass-button-success {
+  position: relative;
+  background: linear-gradient(135deg, #00880D 0%, #00730B 100%);
+  color: #FFFFFF;
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow:
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1.5px 1px 0 rgba(0, 0, 0, 0.18),
+    inset 0 0 12px rgba(255, 255, 255, 0.18),
+    0 8px 24px -4px rgba(0, 136, 13, 0.4),
+    0 2px 6px rgba(15, 23, 42, 0.08);
+  transition: all 0.2s var(--lg-spring);
+}
+
+.glass-button-success:hover {
+  background: linear-gradient(135deg, #009B0F 0%, #00820D 100%);
+  box-shadow:
+    inset 0 2px 1.5px 0 rgba(255, 255, 255, 0.65),
+    0 12px 28px -4px rgba(0, 136, 13, 0.5),
+    0 4px 8px rgba(15, 23, 42, 0.1);
+  transform: translateY(-1px);
+}
+
+.glass-button-success:active {
+  transform: scale(0.98);
+}
+
+/* Glassy Standard Button (Neutral Frosted Slab) */
+.glass-button-standard {
+  position: relative;
+  background: rgba(255, 255, 255, 0.7);
+  color: #1E293B;
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.95),
+    inset -1px -1px 0 0 rgba(255, 255, 255, 0.35),
+    0 4px 14px -3px rgba(15, 23, 42, 0.06),
+    0 1px 2px rgba(15, 23, 42, 0.03);
+  transition: all 0.2s var(--lg-spring);
+}
+
+.glass-button-standard:hover {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(255, 255, 255, 1);
+  box-shadow:
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 1),
+    0 8px 20px -4px rgba(15, 23, 42, 0.09),
+    0 2px 4px rgba(15, 23, 42, 0.04);
+  transform: translateY(-1px);
+}
+
+.glass-button-standard:active {
+  transform: scale(0.98);
+}
+
+/* Glassy Input Field */
+.glass-input {
+  background: rgba(255, 255, 255, 0.62) !important;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(203, 213, 225, 0.65) !important;
+  box-shadow:
+    inset 0 1.5px 3px rgba(15, 23, 42, 0.04),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.8),
+    0 1px 2px rgba(15, 23, 42, 0.02);
+  transition: all 0.2s ease;
+}
+
+.glass-input:hover {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(148, 163, 184, 0.7) !important;
+}
+
+.glass-input:focus {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: #00AED6 !important;
+  box-shadow:
+    0 0 0 3px rgba(0, 174, 214, 0.22),
+    inset 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+  outline: none !important;
+}
+
+/* Glassy Segmented Control / Tab Pill */
+.glass-tabs-track {
+  background: rgba(226, 232, 240, 0.55);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.glass-tab-active {
+  background: rgba(255, 255, 255, 0.92);
+  color: #0F172A;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 4px 12px -2px rgba(15, 23, 42, 0.08),
+    0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+/* Sliding Pill Indicators (for Framer Motion layoutId) */
+.glass-tab-pill-cyan {
+  position: absolute !important;
+  inset: 0 !important;
+  background: linear-gradient(135deg, #00AED6 0%, #0099BD 100%) !important;
+  border-radius: 9999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow:
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.6),
+    0 4px 12px rgba(0, 174, 214, 0.35) !important;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.glass-tab-pill-white {
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-radius: inherit !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  box-shadow:
+    0 2px 8px -1px rgba(15, 23, 42, 0.08),
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Glassy Dialog Modal */
+.glass-modal {
+  position: relative;
+  background: rgba(255, 255, 255, 0.85);
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.2) 40%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  -webkit-backdrop-filter: blur(28px) saturate(170%) brightness(104%);
+  backdrop-filter: blur(28px) saturate(170%) brightness(104%);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow:
+    inset 0 0 20px -4px rgba(255, 255, 255, 0.85),
+    inset 1.5px 2px 0 0 rgba(255, 255, 255, 1),
+    inset -1.5px -2px 0 0 rgba(255, 255, 255, 0.5),
+    0 24px 64px -12px rgba(15, 23, 42, 0.22),
+    0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+/* Glassy Top App Bar / Header */
+.glass-header {
+  position: relative;
+  background: rgba(255, 255, 255, 0.76);
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.65) 0%,
+    rgba(255, 255, 255, 0.28) 100%
+  );
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  backdrop-filter: blur(24px) saturate(170%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 10px 30px -10px rgba(0, 174, 214, 0.05),
+    0 4px 16px -2px rgba(15, 23, 42, 0.03);
+}
+
+.glass-header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(0, 174, 214, 0.2) 20%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(0, 174, 214, 0.2) 80%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+}
+
+/* Glassy Floating Dock / Bottom Bar */
+.glass-dock {
+  background: rgba(255, 255, 255, 0.78);
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border-top: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.95),
+    0 -8px 24px -4px rgba(15, 23, 42, 0.06);
+}
+
+/* Glassy Badge / Pill */
+.glass-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.25rem 0.625rem;
+  white-space: nowrap;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 1px 3px rgba(15, 23, 42, 0.03);
+}

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion } from 'motion/react';
 import {
   Check,
   Copy,
@@ -231,7 +232,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
           <button
             type="button"
             onClick={onBackToEditor}
-            className="w-full sm:w-auto min-h-[42px] px-3.5 sm:px-4 py-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center justify-center sm:justify-start gap-1.5 transition-colors shadow-2xs shrink-0"
+            className="w-full sm:w-auto min-h-[42px] px-3.5 sm:px-4 py-2 rounded-full glass-button-standard text-xs font-bold text-slate-700 flex items-center justify-center sm:justify-start gap-1.5 transition-all shadow-sm shrink-0"
           >
             <ArrowLeft className="w-4 h-4 text-[#00AED6] shrink-0" />
             <span>Edit Struk (Pembuat)</span>
@@ -240,13 +241,13 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
           <button
             type="button"
             onClick={onOpenHistory}
-            className="w-full sm:w-auto min-h-[42px] px-3.5 sm:px-4 py-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center justify-center sm:justify-start gap-1.5 transition-colors shadow-2xs shrink-0"
+            className="w-full sm:w-auto min-h-[42px] px-3.5 sm:px-4 py-2 rounded-full glass-button-standard text-xs font-bold text-slate-700 flex items-center justify-center sm:justify-start gap-1.5 transition-all shadow-sm shrink-0"
           >
             <Receipt className="w-4 h-4 text-[#00AED6] shrink-0" />
             <span>Lihat Riwayat Patungan Saya</span>
           </button>
         ) : (
-          <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-bold text-slate-600">
+          <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full glass-badge text-xs font-bold text-slate-700">
             <Receipt className="w-3.5 h-3.5 text-[#00AED6] shrink-0" />
             <span>Halaman Pembayaran Patungan</span>
           </div>
@@ -260,7 +261,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
               'personal-link'
             )
           }
-          className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-full bg-[#00880D] hover:bg-[#00700B] text-white text-xs font-extrabold flex items-center justify-center gap-1.5 transition-colors shadow-2xs min-w-0"
+          className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-full glass-button-success text-white text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all shadow-md min-w-0"
           title={`Salin Link ${activeBreakdown.participant.name}`}
         >
           {copiedField === 'personal-link' ? (
@@ -277,11 +278,12 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
         </button>
       </div>
 
-      {/* Split Bill Teal Header Card */}
-      <div className="bg-gradient-to-r from-[#00AED6] to-[#0093B8] rounded-3xl p-4 sm:p-6 text-white shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
+      {/* Split Bill Teal Header Card with GlassyUI polish */}
+      <div className="relative overflow-hidden rounded-3xl p-4 sm:p-6 text-white shadow-xl bg-gradient-to-br from-[#00AED6] via-[#0093B8] to-[#007A99] border border-white/30 backdrop-blur-md">
+        <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-black/10 pointer-events-none" />
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
           <div>
-            <div className="text-[11px] sm:text-xs text-white/85 font-bold flex flex-wrap items-center gap-1.5">
+            <div className="text-[11px] sm:text-xs text-white/90 font-bold flex flex-wrap items-center gap-1.5 drop-shadow-xs">
               <Receipt className="w-3.5 h-3.5" />
               <span>Oleh {bill.creatorName || 'Pembuat Split Bill'}</span>
               <span aria-hidden="true">·</span>
@@ -289,36 +291,36 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
               <span aria-hidden="true">·</span>
               <span>{bill.date}</span>
             </div>
-            <h1 className="text-xl sm:text-3xl font-extrabold font-display mt-1">
+            <h1 className="text-xl sm:text-3xl font-extrabold font-display mt-1 drop-shadow-xs">
               {bill.title || 'Tagihan Split Bill'}
             </h1>
             {bill.notes && (
-              <p className="mt-2 text-xs text-white/95 bg-white/15 px-3 py-1.5 rounded-2xl inline-block">
+              <p className="mt-2 text-xs text-white/95 bg-white/20 border border-white/30 backdrop-blur-xs px-3 py-1.5 rounded-2xl inline-block shadow-2xs">
                 Catatan: “{bill.notes}”
               </p>
             )}
           </div>
-          <div className="flex sm:block items-center justify-between bg-white/15 px-3.5 py-2.5 rounded-2xl border border-white/20">
-            <span className="text-xs text-white/85 block">Total Struk Utuh</span>
-            <span className="text-base sm:text-xl font-extrabold font-mono tabular-nums text-white">
+          <div className="flex sm:block items-center justify-between bg-white/20 backdrop-blur-md px-3.5 py-2.5 rounded-2xl border border-white/30 shadow-xs">
+            <span className="text-xs text-white/90 block font-medium">Total Struk Utuh</span>
+            <span className="text-base sm:text-xl font-extrabold font-mono tabular-nums text-white drop-shadow-xs">
               {formatRupiah(summary.grandTotal)}
             </span>
           </div>
         </div>
 
         {/* Pelunasan Progress Bar */}
-        <div className="mt-4 pt-3.5 border-t border-white/20">
+        <div className="relative z-10 mt-4 pt-3.5 border-t border-white/20">
           <div className="flex items-center justify-between text-[11px] sm:text-xs mb-1.5">
-            <span className="font-bold text-white">
+            <span className="font-bold text-white drop-shadow-xs">
               Status Patungan: {summary.paidCount}/{bill.participants.length} lunas
             </span>
-            <span className="font-mono tabular-nums font-extrabold text-white">
+            <span className="font-mono tabular-nums font-extrabold text-white drop-shadow-xs">
               {formatRupiah(summary.totalPaidAmount)} ({progressPercent}%)
             </span>
           </div>
-          <div className="w-full h-2 bg-white/25 rounded-full overflow-hidden">
+          <div className="w-full h-2.5 bg-black/20 rounded-full overflow-hidden p-0.5 border border-white/20">
             <div
-              className="h-full bg-white transition-all duration-300"
+              className="h-full bg-gradient-to-r from-emerald-400 to-teal-200 rounded-full transition-all duration-300 shadow-sm"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -326,12 +328,12 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
       </div>
 
       {/* Step 1: Mobile-First Participant Selector (Horizontal Scroll on Mobile + Grid on Desktop) */}
-      <div className="mt-4 bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-2xs">
+      <div className="mt-4 glass-panel rounded-3xl p-4 sm:p-6 shadow-lg">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-extrabold text-slate-900 font-display">
             1. Pilih Nama Kamu ({summary.participantBreakdowns.length} Orang)
           </h2>
-          <span className="text-[11px] text-slate-500">
+          <span className="text-[11px] text-slate-500 font-medium">
             Ketuk nama untuk lihat tagihan
           </span>
         </div>
@@ -357,10 +359,10 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                   setProofPreview(b.participant.proofImageUrl);
                   setProofRefNumber(b.participant.proofRefNumber || '');
                 }}
-                className={`w-[245px] sm:w-auto min-h-[58px] p-3 rounded-2xl border-2 text-left transition-all flex items-center justify-between gap-2.5 shrink-0 ${
+                className={`w-[245px] sm:w-auto min-h-[58px] p-3 rounded-2xl text-left transition-all flex items-center justify-between gap-2.5 shrink-0 glass-card glass-card-interactive shadow-xs ${
                   isSelected
-                    ? 'border-[#00AED6] bg-[#00AED6]/[0.08]'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                    ? 'glass-card-active shadow-[#00AED6]/15'
+                    : ''
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -369,11 +371,11 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                       src={b.participant.photoURL}
                       alt={b.participant.name}
                       referrerPolicy="no-referrer"
-                      className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
+                      className="w-9 h-9 rounded-full object-cover border border-slate-200/60 shrink-0 shadow-2xs"
                     />
                   ) : (
                     <div
-                      className={`w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-xs shrink-0 ${getAvatarColor(
+                      className={`w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-xs shrink-0 shadow-2xs ${getAvatarColor(
                         idx
                       )}`}
                     >
@@ -386,7 +388,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                         {b.participant.name}
                       </span>
                       {isMyAccount && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-slate-900 text-white text-[9px] font-bold shrink-0">
+                        <span className="glass-badge px-1.5 py-0.5 text-[9px] font-bold shrink-0 bg-slate-900 text-white">
                           Akunmu
                         </span>
                       )}
@@ -410,7 +412,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                   <div className="text-xs sm:text-sm font-extrabold font-mono tabular-nums text-slate-900">
                     {formatRupiah(b.finalTotal)}
                   </div>
-                  <div className="text-[10px] text-slate-400 font-mono tabular-nums">
+                  <div className="text-[10px] text-slate-500 font-mono tabular-nums">
                     {b.items.length} menu
                   </div>
                 </div>
@@ -420,7 +422,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
         </div>
 
         {/* Account & Personal History Sync Strip */}
-        <div className="mt-3.5 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+        <div className="mt-3.5 pt-3 border-t border-white/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
           {currentUser ? (
             (activeBreakdown.participant.userId &&
               activeBreakdown.participant.userId === currentUser.uid) ||
@@ -445,7 +447,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                   <button
                     type="button"
                     onClick={() => onClaimParticipant(activeBreakdown.participant.id)}
-                    className="h-8 px-3.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold shrink-0 transition-colors"
+                    className="h-8 px-3.5 rounded-full glass-button-prominent text-white text-[11px] font-bold shrink-0 transition-all shadow-xs"
                   >
                     Tautkan sebagai Tagihan Saya
                   </button>
@@ -461,7 +463,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                 <button
                   type="button"
                   onClick={onLoginGoogle}
-                  className="h-8 px-3.5 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-[11px] font-bold shrink-0 transition-colors"
+                  className="h-8 px-3.5 rounded-full glass-button-prominent text-white text-[11px] font-bold shrink-0 transition-all shadow-xs"
                 >
                   Login &amp; Simpan ke Akun
                 </button>
@@ -471,33 +473,52 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
         </div>
       </div>
 
-      {/* Mobile Sub-View Switcher (Personal Bill & Payment vs Full Receipt Menu List) */}
-      <div className="lg:hidden mt-4 bg-white border border-slate-200 rounded-2xl p-1.5 grid grid-cols-2 gap-1.5 shadow-2xs">
+      {/* Mobile Sub-View Switcher (Personal Bill & Payment vs Full Receipt Menu List) with Smooth Sliding Pill */}
+      <div className="lg:hidden mt-4 p-1.5 glass-tabs-track rounded-2xl grid grid-cols-2 gap-1.5 shadow-md relative">
         <button
           type="button"
           onClick={() => setMobileSection('personal')}
-          className={`min-h-[42px] px-3 py-2 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all ${
+          className={`relative min-h-[42px] px-3 py-2 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-colors ${
             mobileSection === 'personal'
-              ? 'bg-[#00AED6] text-white shadow-2xs'
-              : 'text-slate-600 hover:bg-slate-50'
+              ? 'text-slate-900'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Receipt className="w-3.5 h-3.5" />
-          <span>Tagihan & QRIS Kamu</span>
+          {mobileSection === 'personal' && (
+            <motion.div
+              layoutId="portal-mobile-section-pill"
+              className="glass-tab-pill-white"
+              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+            />
+          )}
+          <span className="relative z-10 flex items-center gap-1.5">
+            <Receipt className="w-3.5 h-3.5" />
+            <span>Tagihan & QRIS Kamu</span>
+          </span>
         </button>
         <button
           type="button"
           onClick={() => setMobileSection('full_receipt')}
-          className={`min-h-[42px] px-3 py-2 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all ${
+          className={`relative min-h-[42px] px-3 py-2 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-colors ${
             mobileSection === 'full_receipt'
-              ? 'bg-[#00AED6] text-white shadow-2xs'
-              : 'text-slate-600 hover:bg-slate-50'
+              ? 'text-slate-900'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <ListChecks className="w-3.5 h-3.5" />
-          <span>Semua Menu ({bill.items.length})</span>
+          {mobileSection === 'full_receipt' && (
+            <motion.div
+              layoutId="portal-mobile-section-pill"
+              className="glass-tab-pill-white"
+              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+            />
+          )}
+          <span className="relative z-10 flex items-center gap-1.5">
+            <ListChecks className="w-3.5 h-3.5" />
+            <span>Semua Menu ({bill.items.length})</span>
+          </span>
         </button>
       </div>
+
 
       {/* Main 2-Column Split Bill Portal */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 mt-4 sm:mt-6 items-start">
@@ -507,19 +528,19 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
           <div
             className={`${
               mobileSection === 'full_receipt' ? 'hidden lg:block' : 'block'
-            } relative bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-2xs overflow-hidden`}
+            } relative glass-panel rounded-3xl p-4 sm:p-6 shadow-lg overflow-hidden`}
           >
             {/* Decorative Side Cutout Notches */}
             <div
               aria-hidden="true"
-              className="hidden sm:block absolute -left-3 top-20 w-6 h-6 rounded-full bg-[#F1F5F9] border border-slate-200"
+              className="hidden sm:block absolute -left-3 top-20 w-6 h-6 rounded-full bg-slate-100/80 border border-white/50 backdrop-blur-md"
             />
             <div
               aria-hidden="true"
-              className="hidden sm:block absolute -right-3 top-20 w-6 h-6 rounded-full bg-[#F1F5F9] border border-slate-200"
+              className="hidden sm:block absolute -right-3 top-20 w-6 h-6 rounded-full bg-slate-100/80 border border-white/50 backdrop-blur-md"
             />
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b-2 border-dashed border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b-2 border-dashed border-white/30">
               <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
                 <Receipt className="w-5 h-5 text-[#00AED6] shrink-0 mt-0.5 sm:mt-0" />
                 <div className="min-w-0 flex-1">
@@ -537,13 +558,13 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowReceiptProofModal(true)}
-                    className="text-[#00880D] hover:underline flex items-center gap-1"
+                    className="text-[#00880D] hover:underline flex items-center gap-1 font-extrabold"
                   >
                     <FileCheck2 className="w-4 h-4" />
                     Lihat Bukti Lunas
                   </button>
                 ) : (
-                  <span className="text-amber-700 flex items-center gap-1">
+                  <span className="text-amber-700 flex items-center gap-1 font-semibold">
                     <Clock className="w-3.5 h-3.5" />
                     Menunggu Bayar
                   </span>
@@ -552,7 +573,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
             </div>
 
             {/* Mobile-Friendly Item List with Pre-Split Original Price & Personal Share */}
-            <div className="mt-3 divide-y divide-slate-100">
+            <div className="mt-3 divide-y divide-white/20">
               {activeBreakdown.items.length === 0 ? (
                 <div className="py-6 text-center text-xs text-slate-400">
                   Belum ada item pesanan yang ditugaskan untuk nama ini.
@@ -585,7 +606,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                     </div>
 
                     {/* Pre-Split Price vs Share Amount Box */}
-                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start bg-slate-50 sm:bg-transparent px-3 py-1.5 sm:p-0 rounded-xl shrink-0">
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start glass-card sm:bg-transparent px-3 py-1.5 sm:p-0 rounded-xl shrink-0 shadow-2xs">
                       <div className="text-[11px] font-mono tabular-nums text-slate-500">
                         Harga Asli: <span className="font-semibold text-slate-700">{formatRupiah(item.lineTotal)}</span>
                         {item.sharedWithCount > 1 ? ` ÷ ${item.sharedWithCount}` : ''}
@@ -600,7 +621,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
             </div>
 
             {/* Proportional Breakdown */}
-            <div className="mt-3 pt-4 border-t-2 border-dashed border-slate-200 space-y-2 text-xs">
+            <div className="mt-3 pt-4 border-t-2 border-dashed border-white/30 space-y-2 text-xs">
               <div className="flex items-center justify-between text-slate-600">
                 <span>Subtotal Bagian Pesanan Kamu</span>
                 <span className="font-mono tabular-nums font-bold text-slate-900">
@@ -608,7 +629,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                 </span>
               </div>
               {activeBreakdown.taxShare > 0 && (
-                <div className="flex items-center justify-between text-slate-600">
+                <div className="flex items-center justify-between text-slate-700 font-medium">
                   <span>
                     + Pajak PB1 / PPN (Dari Total Pajak {formatRupiah(summary.computedTax)})
                   </span>
@@ -648,7 +669,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                 </div>
               )}
               {activeBreakdown.travelItems.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-dashed border-sky-200 space-y-1.5">
+                <div className="mt-2 pt-2 border-t border-dashed border-[#00AED6]/30 space-y-1.5">
                   <div className="text-[11px] font-bold text-[#00AED6] flex items-center gap-1">
                     <Car className="w-3.5 h-3.5" />
                     <span>Biaya Perjalanan (Di Luar Struk Makanan)</span>
@@ -656,7 +677,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                   {activeBreakdown.travelItems.map((tr) => (
                     <div
                       key={tr.id}
-                      className="flex items-center justify-between gap-2 text-slate-600"
+                      className="flex items-center justify-between gap-2 text-slate-700"
                     >
                       <span className="min-w-0">
                         + {tr.name}{' '}
@@ -684,7 +705,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
             </div>
 
             {/* Grand Total for Selected Friend + Copy Nominal */}
-            <div className="mt-4 pt-4 border-t-2 border-dashed border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="mt-4 pt-4 border-t-2 border-dashed border-white/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <span className="text-xs text-slate-500 block break-words">
                   Total yang harus dibayar oleh <strong className="text-slate-800">{activeBreakdown.participant.name}</strong>
@@ -698,14 +719,14 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                 <button
                   type="button"
                   onClick={() => setUseUniqueCode(!useUniqueCode)}
-                  className="min-h-[40px] flex-1 sm:flex-initial px-3.5 py-2 rounded-full border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-600 transition-colors whitespace-nowrap"
+                  className="min-h-[40px] flex-1 sm:flex-initial px-3.5 py-2 rounded-full glass-button-standard text-xs font-bold text-slate-700 transition-all whitespace-nowrap"
                 >
                   {useUniqueCode ? 'Tanpa Kode Unik' : `Kode Unik (+${activeBreakdown.uniqueCode})`}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleCopy(String(transferAmount), 'nominal')}
-                  className="min-h-[40px] flex-1 sm:flex-initial px-4 py-2 rounded-full bg-[#00AED6] hover:bg-[#0099BD] text-white text-xs font-extrabold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap"
+                  className="min-h-[40px] flex-1 sm:flex-initial px-4 py-2 rounded-full glass-button-prominent text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all whitespace-nowrap shadow-sm"
                 >
                   {copiedField === 'nominal' ? (
                     <>
@@ -727,9 +748,9 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
           <div
             className={`${
               mobileSection === 'personal' ? 'hidden lg:block' : 'block'
-            } bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-2xs`}
+            } glass-panel rounded-3xl p-4 sm:p-6 shadow-lg`}
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-dashed border-slate-200">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-dashed border-white/30">
               <div>
                 <h2 className="text-sm sm:text-base font-extrabold text-slate-900 font-display">
                   Daftar Seluruh Menu yang Di-Split Bill ({bill.items.length} Menu)
@@ -738,17 +759,17 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                   Transparansi harga asli setiap menu sebelum dibagi patungan beserta daftar pemesannya
                 </p>
               </div>
-              <span className="text-xs font-mono tabular-nums font-bold text-slate-700">
+              <span className="glass-badge text-xs font-mono tabular-nums font-bold text-slate-700">
                 Total Struk: {formatRupiah(summary.grandTotal)}
               </span>
             </div>
 
             {bill.items.length === 0 ? (
-              <div className="mt-4 p-5 rounded-2xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
+              <div className="mt-4 p-5 rounded-2xl border border-dashed border-slate-300/60 text-center text-xs text-slate-400">
                 Tagihan ini menggunakan mode Bagi Rata tanpa rincian item menu.
               </div>
             ) : (
-              <div className="mt-3 divide-y divide-slate-100">
+              <div className="mt-3 divide-y divide-white/20">
                 {bill.items.map((item) => {
                   const fullLinePrice = Math.max(0, item.qty) * Math.max(0, item.unitPrice);
                   const validIds = (item.assignedTo || []).filter((id) =>
@@ -798,8 +819,8 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex sm:flex-col items-center sm:items-end justify-between bg-slate-50 sm:bg-transparent px-3 py-1.5 sm:p-0 rounded-xl shrink-0">
-                        <span className="text-[11px] text-slate-400 block">
+                      <div className="flex sm:flex-col items-center sm:items-end justify-between glass-card sm:bg-transparent px-3 py-1.5 sm:p-0 rounded-xl shrink-0 shadow-2xs">
+                        <span className="text-[11px] text-slate-500 block">
                           Harga Sebelum Bagi
                         </span>
                         <span className="text-sm font-extrabold font-mono tabular-nums text-slate-900">
@@ -813,7 +834,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
             )}
 
             {/* Full Receipt Subtotal + Tax + Discount Summary */}
-            <div className="mt-4 pt-4 border-t border-dashed border-slate-200 space-y-1.5 text-xs">
+            <div className="mt-4 pt-4 border-t border-dashed border-white/30 space-y-1.5 text-xs">
               <div className="flex justify-between text-slate-600">
                 <span>Subtotal Seluruh Menu (Sebelum Pajak)</span>
                 <span className="font-mono tabular-nums font-bold text-slate-900">
@@ -853,7 +874,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                 </div>
               )}
               {(bill.travelItems || []).length > 0 && (
-                <div className="pt-2 mt-1 border-t border-dashed border-sky-200 space-y-1.5">
+                <div className="pt-2 mt-1 border-t border-dashed border-[#00AED6]/30 space-y-1.5">
                   <div className="text-[11px] font-bold text-[#00AED6] flex items-center gap-1">
                     <Car className="w-3.5 h-3.5" />
                     <span>Biaya Perjalanan (Di Luar Struk Makanan)</span>
@@ -879,7 +900,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                   })}
                 </div>
               )}
-              <div className="pt-2 border-t border-slate-100 flex justify-between text-sm font-extrabold text-slate-900">
+              <div className="pt-2 border-t border-white/20 flex justify-between text-sm font-extrabold text-slate-900">
                 <span>
                   {summary.computedTravel > 0
                     ? 'Total Struk + Perjalanan'
@@ -900,7 +921,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
           } lg:col-span-5 space-y-5 sm:space-y-6`}
         >
           {/* Payment Methods & Custom QRIS Card */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-2xs">
+          <div className="glass-panel rounded-3xl p-4 sm:p-6 shadow-lg">
             <h2 className="text-sm sm:text-base font-extrabold text-slate-900 font-display">
               2. Bayar ke {bill.creatorName || 'Pembuat Split Bill'}
             </h2>
@@ -909,7 +930,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
             </p>
 
             {enabledChannels.length === 0 ? (
-              <div className="mt-4 p-5 rounded-2xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
+              <div className="mt-4 p-5 rounded-2xl border border-dashed border-slate-300/60 text-center text-xs text-slate-400">
                 Pembuat tagihan belum menambahkan gambar QRIS atau nomor rekening.
               </div>
             ) : (
@@ -922,10 +943,10 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                   return (
                     <div
                       key={channel.id}
-                      className="p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between gap-3 bg-slate-50/50"
+                      className="p-3.5 rounded-2xl glass-card flex items-center justify-between gap-3 shadow-xs"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-800 shrink-0">
+                        <div className="w-10 h-10 rounded-2xl bg-white/70 border border-white/60 flex items-center justify-center text-slate-800 shrink-0 shadow-2xs">
                           {isQris ? (
                             <QrCode className="w-5 h-5 text-[#00AED6]" />
                           ) : isWallet ? (
@@ -948,7 +969,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                         <button
                           type="button"
                           onClick={() => setShowQrisModal(!showQrisModal)}
-                          className="min-h-[38px] px-3.5 py-2 rounded-full bg-[#00AED6] hover:bg-[#0099BD] text-white text-xs font-extrabold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0"
+                          className="min-h-[38px] px-3.5 py-2 rounded-full glass-button-prominent text-white text-xs font-extrabold flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 shadow-xs"
                         >
                           <QrCode className="w-3.5 h-3.5" />
                           {showQrisModal ? 'Tutup' : 'Buka QRIS'}
@@ -962,7 +983,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                               `ch-${channel.id}`
                             )
                           }
-                          className="min-h-[38px] px-3.5 py-2 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0"
+                          className="min-h-[38px] px-3.5 py-2 rounded-full glass-button-standard text-slate-800 text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap shadow-2xs shrink-0"
                         >
                           {copiedField === `ch-${channel.id}` ? (
                             <>
@@ -1006,7 +1027,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
           </div>
 
           {/* Payment Status Confirmation & Upload Proof Box */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-2xs">
+          <div className="glass-panel rounded-3xl p-4 sm:p-6 shadow-sm">
             <h2 className="text-sm sm:text-base font-extrabold text-slate-900 font-display break-words">
               3. Konfirmasi Pembayaran ({activeBreakdown.participant.name})
             </h2>
@@ -1035,10 +1056,10 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                       key={method}
                       type="button"
                       onClick={() => setSelectedVia(method)}
-                      className={`min-h-[36px] px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap ${
+                      className={`min-h-[36px] px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
                         selectedVia === method
-                          ? 'bg-[#00AED6] text-white'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          ? 'glass-button-prominent text-white'
+                          : 'glass-button-standard text-slate-700'
                       }`}
                     >
                       {method}
@@ -1065,13 +1086,13 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                     value={proofRefNumber}
                     onChange={(e) => setProofRefNumber(e.target.value)}
                     placeholder="Nomor referensi transaksi"
-                    className="flex-1 min-h-[42px] px-3.5 py-2 rounded-2xl border border-slate-300 text-xs font-mono text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                    className="glass-input flex-1 min-h-[42px] px-3.5 py-2 rounded-2xl text-xs font-mono text-slate-800"
                   />
                   <button
                     type="button"
                     onClick={() => proofFileRef.current?.click()}
                     disabled={isProcessingProof}
-                    className="min-h-[42px] px-4 py-2 rounded-full border border-slate-300 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors whitespace-nowrap disabled:opacity-50"
+                    className="glass-button-standard min-h-[42px] px-4 py-2 rounded-full text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-all whitespace-nowrap disabled:opacity-50"
                   >
                     <Upload className="w-3.5 h-3.5" />
                     {isProcessingProof
@@ -1083,13 +1104,13 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                 </div>
 
                 {proofPreview && (
-                  <div className="mt-2.5 p-2.5 rounded-2xl border border-[#00880D]/30 bg-[#00880D]/[0.04] flex items-center justify-between gap-3">
+                  <div className="mt-2.5 p-2.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 backdrop-blur-xs flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <img
                         src={proofPreview}
                         alt="Pratinjau bukti transfer"
                         referrerPolicy="no-referrer"
-                        className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
+                        className="w-10 h-10 rounded-lg object-cover border border-slate-200/80 shrink-0"
                       />
                       <div className="min-w-0">
                         <span className="text-xs font-bold text-[#00880D] block truncate flex items-center gap-1">
@@ -1112,7 +1133,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                           paymentNote
                         );
                       }}
-                      className="text-xs text-slate-400 hover:text-red-600 px-2 py-1"
+                      className="text-xs text-slate-400 hover:text-red-600 px-2 py-1 font-semibold"
                     >
                       Hapus
                     </button>
@@ -1129,12 +1150,12 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                   value={paymentNote}
                   onChange={(e) => setPaymentNote(e.target.value)}
                   placeholder="Tulis catatan untuk pembuat tagihan..."
-                  className="w-full min-h-[42px] px-3.5 py-2 rounded-2xl border border-slate-300 text-xs text-slate-800 focus:border-[#00AED6] focus:outline-none"
+                  className="glass-input w-full min-h-[42px] px-3.5 py-2 rounded-2xl text-xs text-slate-800"
                 />
               </div>
 
               {activeBreakdown.participant.status === 'paid' ? (
-                <div className="p-4 rounded-2xl bg-[#00880D]/[0.06] border border-[#00880D]/30 space-y-3">
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-xs space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-[#00880D] font-extrabold text-sm">
                       <CheckCircle2 className="w-5 h-5" />
@@ -1153,7 +1174,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowReceiptProofModal(true)}
-                      className="min-h-[42px] flex-1 py-2.5 px-4 rounded-full bg-[#00880D] hover:bg-[#00700B] text-white text-xs font-extrabold flex items-center justify-center gap-1.5 transition-colors"
+                      className="glass-button-success min-h-[42px] flex-1 py-2.5 px-4 rounded-full text-white text-xs font-extrabold flex items-center justify-center gap-1.5"
                     >
                       <FileCheck2 className="w-4 h-4" />
                       Buka Struk Bukti Lunas
@@ -1168,7 +1189,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                           paymentNote
                         )
                       }
-                      className="min-h-[42px] py-2.5 px-4 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors"
+                      className="glass-button-standard min-h-[42px] py-2.5 px-4 rounded-full text-xs font-bold text-slate-700"
                     >
                       Batalkan
                     </button>
@@ -1188,7 +1209,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                     );
                     setShowReceiptProofModal(true);
                   }}
-                  className="w-full min-h-[48px] py-3 px-5 rounded-full bg-[#00880D] hover:bg-[#00700B] text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-colors shadow-xs"
+                  className="glass-button-success w-full min-h-[48px] py-3 px-5 rounded-full text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg"
                 >
                   <CheckCircle2 className="w-5 h-5" />
                   Tandai Sudah Bayar {formatRupiah(transferAmount)}
@@ -1201,10 +1222,10 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
 
       {/* Digital Paid Receipt Modal (Bottom Sheet on Mobile) */}
       {showReceiptProofModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto">
-          <div className="bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-xl max-h-[92vh] overflow-y-auto">
-            <div className="w-10 h-1.5 bg-slate-200 rounded-full mx-auto mb-3 sm:hidden" />
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-md p-0 sm:p-4 overflow-y-auto">
+          <div className="glass-modal rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div className="w-10 h-1.5 bg-slate-300/80 rounded-full mx-auto mb-3 sm:hidden" />
+            <div className="flex items-center justify-between pb-4 border-b border-white/40">
               <div className="flex items-center gap-2 text-[#00880D] font-extrabold text-sm">
                 <CheckCircle2 className="w-5 h-5" />
                 <span>STRUK BUKTI LUNAS SPLIT BILL</span>
@@ -1212,13 +1233,13 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowReceiptProofModal(false)}
-                className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                className="glass-button-standard min-h-[38px] min-w-[38px] flex items-center justify-center rounded-full text-slate-500 hover:text-slate-800"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="mt-4 text-center pb-4 border-b-2 border-dashed border-slate-200">
+            <div className="mt-4 text-center pb-4 border-b-2 border-dashed border-slate-300/60">
               <span className="text-xs text-slate-500 block">Nominal Dibayarkan</span>
               <span className="text-2xl font-extrabold font-mono tabular-nums text-slate-900 mt-1 block">
                 {formatRupiah(transferAmount)}
@@ -1300,7 +1321,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
             </div>
 
             {(activeBreakdown.participant.proofImageUrl || proofPreview) && (
-              <div className="mt-4 pt-3 border-t border-slate-200">
+              <div className="mt-4 pt-3 border-t border-white/40">
                 <span className="text-xs text-slate-500 block mb-2">
                   Lampiran Bukti Transfer:
                 </span>
@@ -1308,7 +1329,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                   src={activeBreakdown.participant.proofImageUrl || proofPreview}
                   alt="Lampiran bukti transfer"
                   referrerPolicy="no-referrer"
-                  className="max-h-44 mx-auto rounded-xl border border-slate-200 object-contain"
+                  className="max-h-44 mx-auto rounded-xl border border-white/50 shadow-sm object-contain"
                 />
               </div>
             )}
@@ -1324,7 +1345,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
                     'proof-text'
                   )
                 }
-                className="min-h-[44px] flex-1 py-2.5 px-4 rounded-full bg-[#00AED6] hover:bg-[#0099BD] text-white text-xs font-extrabold flex items-center justify-center gap-1.5 transition-colors"
+                className="glass-button-prominent min-h-[44px] flex-1 py-2.5 px-4 rounded-full text-white text-xs font-extrabold flex items-center justify-center gap-1.5"
               >
                 {copiedField === 'proof-text' ? (
                   <>
@@ -1341,7 +1362,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowReceiptProofModal(false)}
-                className="min-h-[44px] py-2.5 px-4 rounded-full border border-slate-300 hover:bg-slate-50 text-xs font-bold text-slate-700"
+                className="glass-button-standard min-h-[44px] py-2.5 px-4 rounded-full text-xs font-bold text-slate-700"
               >
                 Tutup
               </button>
