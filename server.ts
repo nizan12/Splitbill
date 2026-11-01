@@ -12,6 +12,12 @@ const PORT = 3000;
 
 app.use(express.json({ limit: "15mb" }));
 
+// Allow Firebase Auth popup to communicate with the main window
+app.use((_req, res, next) => {
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  next();
+});
+
 // Mount API routes
 app.use("/api", apiRouter);
 
