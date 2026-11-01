@@ -121,12 +121,28 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
   const [showReceiptProofModal, setShowReceiptProofModal] = useState<boolean>(false);
 
   const proofFileRef = useRef<HTMLInputElement>(null);
+  const [isProcessingProof, setIsProcessingProof] = useState<boolean>(false);
 
   const activeBreakdown =
     summary.participantBreakdowns.find((b) => b.participant.id === selectedId) ||
     summary.participantBreakdowns[0];
 
   const enabledChannels = bill.paymentChannels.filter((c) => c.enabled);
+
+  // Keep local proof inputs in sync whenever server or parent updates active participant
+  useEffect(() => {
+    if (activeBreakdown?.participant) {
+      setProofPreview(activeBreakdown.participant.proofImageUrl);
+      setProofRefNumber(activeBreakdown.participant.proofRefNumber || '');
+      setPaymentNote(activeBreakdown.participant.paidNote || '');
+    }
+  }, [
+    activeBreakdown?.participant.id,
+    activeBreakdown?.participant.status,
+    activeBreakdown?.participant.proofImageUrl,
+    activeBreakdown?.participant.proofRefNumber,
+    activeBreakdown?.participant.paidNote,
+  ]);
 
   const handleCopy = async (text: string, key: string) => {
     try {
@@ -173,23 +189,6 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
   const transferAmount = useUniqueCode
     ? activeBreakdown.finalTotal + activeBreakdown.uniqueCode
     : activeBreakdown.finalTotal;
-
-  const [isProcessingProof, setIsProcessingProof] = useState<boolean>(false);
-
-  // Keep local proof inputs in sync whenever server or parent updates active participant
-  useEffect(() => {
-    if (activeBreakdown?.participant) {
-      setProofPreview(activeBreakdown.participant.proofImageUrl);
-      setProofRefNumber(activeBreakdown.participant.proofRefNumber || '');
-      setPaymentNote(activeBreakdown.participant.paidNote || '');
-    }
-  }, [
-    activeBreakdown?.participant.id,
-    activeBreakdown?.participant.status,
-    activeBreakdown?.participant.proofImageUrl,
-    activeBreakdown?.participant.proofRefNumber,
-    activeBreakdown?.participant.paidNote,
-  ]);
 
   const handleProofFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
