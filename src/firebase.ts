@@ -16,6 +16,10 @@ import {
   setDoc,
   deleteDoc,
   getDocFromServer,
+  collection,
+  query,
+  where,
+  getDocs,
   serverTimestamp,
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -208,6 +212,91 @@ export async function deleteBillFromFirestore(billId: string) {
     await deleteDoc(doc(db, 'bills', billId));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+/**
+ * Save the complete bill data (items, participants, channels, etc.) to Firestore
+ * under a separate `billData` collection so it can be synced across devices.
+ */
+export async function saveFullBillToFirestore(bill: any) {
+  if (!bill?.id || !auth.currentUser) return;
+  const path = `billData/${bill.id}`;
+  try {
+    // Strip proof images to stay under Firestore 1MB doc limit.
+    // proofImageUrl is a base64 data URL that can be huge.
+    const sanitizedParticipants = (bill.participants || []).map((p: any) => ({
+      ...p,
+      proofImageUrl: undefined,
+    }));
+
+    // Strip QRIS images from channels too
+    const sanitizedChannels = (bill.paymentChannels || []).map((c: any) => ({
+      ...c,
+      qrisImageUrl: undefined,
+    }));
+
+    await setDoc(
+      doc(db, 'billData', bill.id),
+      {
+        ...bill,
+        participants: sanitizedParticipants,
+        paymentChannels: sanitizedChannels,
+        ownerId: bill.ownerId || auth.currentUser.uid,
+        ownerEmail: (bill.ownerEmail || auth.currentUser.email || '').toLowerCase(),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    // Don't crash the app if Firestore write fails – fallback to Express
+    console.warn('saveFullBillToFirestore failed:', error);
+  }
+}
+
+/**
+ * Fetch all full bill documents owned by the current user from Firestore.
+ * Used to hydrate bill list when logging in on a new device.
+ */
+export async function fetchUserBillsFromFirestore(): Promise<any[]> {
+  if (!auth.currentUser) return [];
+  try {
+    const billDataRef = collection(db, 'billData');
+    const q = query(billDataRef, where('ownerId', '==', auth.currentUser.uid));
+    const snapshot = await getDocs(q);
+    const bills: any[] = [];
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data && data.id) {
+        // Convert Firestore Timestamps back to ISO strings
+        bills.push({
+          ...data,
+          updatedAt:
+            data.updatedAt?.toDate?.()?.toISOString?.() ||
+            data.updatedAt ||
+            new Date().toISOString(),
+          createdAt:
+            data.createdAt?.toDate?.()?.toISOString?.() ||
+            data.createdAt ||
+            new Date().toISOString(),
+        });
+      }
+    });
+    return bills;
+  } catch (error) {
+    console.warn('fetchUserBillsFromFirestore failed:', error);
+    return [];
+  }
+}
+
+/**
+ * Delete full bill data from billData collection.
+ */
+export async function deleteFullBillFromFirestore(billId: string) {
+  try {
+    await deleteDoc(doc(db, 'billData', billId));
+  } catch (error) {
+    console.warn('deleteFullBillFromFirestore failed:', error);
   }
 }
 

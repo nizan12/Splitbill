@@ -58,6 +58,9 @@ import {
   updateUserProfileAvatar,
   syncBillMetadataToFirestore,
   deleteBillFromFirestore,
+  saveFullBillToFirestore,
+  fetchUserBillsFromFirestore,
+  deleteFullBillFromFirestore,
   User,
 } from './firebase';
 
@@ -542,6 +545,42 @@ export default function App() {
         }
 
         syncBillsFromServer(user);
+
+        // Fetch full bill data from Firestore for cross-device sync
+        fetchUserBillsFromFirestore()
+          .then((firestoreBills) => {
+            if (firestoreBills.length > 0) {
+              setSavedBills((prev) => {
+                const merged = mergeBillsList(firestoreBills, prev);
+                try {
+                  const key = `${BASE_STORAGE_KEY}_${user.uid}`;
+                  localStorage.setItem(key, JSON.stringify(merged));
+                } catch {}
+                return merged;
+              });
+
+              // If no local active bill yet, set the most recent Firestore bill
+              const payParam = new URLSearchParams(window.location.search).get('pay');
+              if (!payParam) {
+                setSavedBills((current) => {
+                  if (current.length > 0) {
+                    setActiveBill((prevActive) => {
+                      // Only override if current active is empty/default
+                      const hasContent = Boolean(prevActive.title.trim()) ||
+                        prevActive.items.length > 0 ||
+                        (prevActive.travelItems && prevActive.travelItems.length > 0);
+                      if (!hasContent && current.length > 0) {
+                        return current[0];
+                      }
+                      return prevActive;
+                    });
+                  }
+                  return current;
+                });
+              }
+            }
+          })
+          .catch(() => {});
       } else {
         // Guest mode: load guest bills and sync any visited bill IDs from server
         try {
@@ -720,6 +759,9 @@ export default function App() {
           paidCount: summary.paidCount,
           participantCount: activeBill.participants.length,
         }).catch(() => {});
+
+        // Save full bill data to Firestore for cross-device sync
+        saveFullBillToFirestore(activeBill).catch(() => {});
       }
     }, 450);
 
@@ -933,6 +975,7 @@ export default function App() {
     fetch(`/api/bills/${billId}`, { method: 'DELETE' }).catch(() => {});
     if (currentUser) {
       deleteBillFromFirestore(billId).catch(() => {});
+      deleteFullBillFromFirestore(billId).catch(() => {});
     }
     setSavedBills((prev) => {
       const filtered = prev.filter((b) => b.id !== billId);

@@ -144,5 +144,25 @@ service cloud.firestore {
         isValidId(billId) &&
         existing().ownerId == request.auth.uid;
     }
+
+    // Full bill data collection for cross-device sync
+    // Less strict field validation since it stores the complete bill object
+    match /billData/{billId} {
+      allow read: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow list: if isSignedIn();
+
+      allow create: if isSignedIn() &&
+        isValidId(billId) &&
+        incoming().ownerId == request.auth.uid;
+
+      allow update: if isSignedIn() &&
+        isValidId(billId) &&
+        existing().ownerId == request.auth.uid &&
+        incoming().ownerId == existing().ownerId;
+
+      allow delete: if isSignedIn() &&
+        isValidId(billId) &&
+        existing().ownerId == request.auth.uid;
+    }
   }
 }
