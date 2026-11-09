@@ -14,6 +14,7 @@ import {
   buildShareablePaymentLink,
   formatRupiah,
 } from '../utils/splitCalculator';
+import { saveFullBillToFirestore } from '../firebase';
 
 interface ShareLinkModalProps {
   isOpen: boolean;
@@ -33,16 +34,16 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [selectedParticipantId, setSelectedParticipantId] = useState<string>('all');
 
-  // Immediate base direct link (e.g. https://domain/?pay=sb-123&p=p-1)
+  // Immediate base direct link with embedded fallback data so any device can open it reliably
   const directLink = buildShareablePaymentLink(
     bill,
     selectedParticipantId === 'all' ? undefined : selectedParticipantId,
-    false
+    true
   );
 
   const displayLink = directLink;
 
-  // Make sure the bill is saved to backend when opening share modal
+  // Make sure the bill is saved to backend and Firestore when opening share modal
   useEffect(() => {
     if (!isOpen) return;
     fetch('/api/bills', {
@@ -50,6 +51,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bill),
     }).catch(() => {});
+    saveFullBillToFirestore(bill).catch(() => {});
   }, [isOpen, bill]);
 
   if (!isOpen) return null;

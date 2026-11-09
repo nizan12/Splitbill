@@ -40,6 +40,7 @@ import {
   calculateSplitBill,
   formatRupiah,
   buildShareablePaymentLink,
+  encodeBillToUrlParam,
   decodeBillFromUrlParam,
   compressImageToDataUrl,
 } from './utils/splitCalculator';
@@ -59,6 +60,7 @@ import {
   syncBillMetadataToFirestore,
   deleteBillFromFirestore,
   saveFullBillToFirestore,
+  fetchBillByIdFromFirestore,
   fetchUserBillsFromFirestore,
   deleteFullBillFromFirestore,
   User,
@@ -183,6 +185,85 @@ function canUserEditBill(
   return getCreatedBillIds().includes(bill.id);
 }
 
+function mergeTwoBillVersions(a: SplitBill, b: SplitBill): SplitBill {
+  const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
+  const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+  const newer = aTime >= bTime ? a : b;
+  const older = aTime >= bTime ? b : a;
+
+  const mergedParticipants = (newer.participants || []).map((np) => {
+    const op = (older.participants || []).find((p) => p.id === np.id);
+    if (!op) return np;
+    const isPaid = np.status === 'paid' || op.status === 'paid';
+    return {
+      ...op,
+      ...np,
+      status: (isPaid ? 'paid' : 'unpaid') as PaymentStatus,
+      paidAt: np.paidAt || op.paidAt,
+      paidVia: np.paidVia || op.paidVia,
+      paidNote: np.paidNote !== undefined ? np.paidNote : op.paidNote,
+      proofImageUrl: np.proofImageUrl || op.proofImageUrl,
+      proofRefNumber: np.proofRefNumber || op.proofRefNumber,
+      userId: np.userId || op.userId,
+      email: np.email || op.email,
+      photoURL: np.photoURL || op.photoURL,
+    };
+  });
+
+  const mergedChannels = (newer.paymentChannels || []).map((nc) => {
+    const oc = (older.paymentChannels || []).find(
+      (c) => c.id === nc.id || (c.provider === 'QRIS' && nc.provider === 'QRIS')
+    );
+    if (!oc) return nc;
+    return {
+      ...oc,
+      ...nc,
+      qrisImageUrl: nc.qrisImageUrl || oc.qrisImageUrl,
+      qrisRawString: nc.qrisRawString || oc.qrisRawString,
+    };
+  });
+
+  return {
+    ...older,
+    ...newer,
+    ownerId: newer.ownerId || older.ownerId,
+    ownerEmail: newer.ownerEmail || older.ownerEmail,
+    notes: newer.notes || older.notes,
+    participants: mergedParticipants,
+    paymentChannels:
+      mergedChannels.length > 0 ? mergedChannels : older.paymentChannels || [],
+  };
+}
+
+function findCachedBillInStorage(billId: string): SplitBill | null {
+  if (!billId) return null;
+  try {
+    const candidateKeys: string[] = [`${BASE_STORAGE_KEY}_guest`];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(BASE_STORAGE_KEY) && !candidateKeys.includes(k)) {
+        candidateKeys.push(k);
+      }
+    }
+    let found: SplitBill | null = null;
+    for (const key of candidateKeys) {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) continue;
+      const match = parsed.find(
+        (b: SplitBill) => b && b.id === billId && isBillMeaningful(b)
+      );
+      if (match) {
+        found = found ? mergeTwoBillVersions(found, match) : match;
+      }
+    }
+    return found;
+  } catch {
+    return null;
+  }
+}
+
 function mergeBillsList(primary: SplitBill[], secondary: SplitBill[]): SplitBill[] {
   const deletedSet = new Set(getDeletedBillIds());
   const map = new Map<string, SplitBill>();
@@ -194,11 +275,7 @@ function mergeBillsList(primary: SplitBill[], secondary: SplitBill[]): SplitBill
     if (!existing) {
       map.set(b.id, b);
     } else {
-      const existingTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
-      const incomingTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
-      if (incomingTime >= existingTime) {
-        map.set(b.id, b);
-      }
+      map.set(b.id, mergeTwoBillVersions(b, existing));
     }
   }
   return Array.from(map.values()).sort(
@@ -256,10 +333,21 @@ export default function App() {
     return [];
   });
   const [activeBill, setActiveBill] = useState<SplitBill>(() => {
-    const initial = createEmptyBill();
-    if (!new URLSearchParams(window.location.search).get('pay')) {
-      addCreatedBillId(initial.id);
+    const params = new URLSearchParams(window.location.search);
+    const payBillId = params.get('pay');
+    const encodedData = params.get('d');
+    if (payBillId) {
+      const decoded = encodedData ? decodeBillFromUrlParam(encodedData) : null;
+      const cached = findCachedBillInStorage(payBillId);
+      if (decoded && cached) {
+        return mergeTwoBillVersions(decoded, cached);
+      }
+      if (decoded && isBillMeaningful(decoded)) return decoded;
+      if (cached && isBillMeaningful(cached)) return cached;
+      return { ...createEmptyBill(), id: payBillId };
     }
+    const initial = createEmptyBill();
+    addCreatedBillId(initial.id);
     return initial;
   });
   const [viewMode, setViewMode] = useState<'editor' | 'saved' | 'portal'>(() =>
@@ -269,7 +357,7 @@ export default function App() {
   const [mobileEditorTab, setMobileEditorTab] = useState<'input' | 'summary'>('input');
   const [portalParticipantId, setPortalParticipantId] = useState<
     string | undefined
-  >(undefined);
+  >(() => new URLSearchParams(window.location.search).get('p') || undefined);
 
   // Modals
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -530,9 +618,18 @@ export default function App() {
 
         const params = new URLSearchParams(window.location.search);
         const payParam = params.get('pay');
-        if (!payParam && combinedLocal.length > 0) {
+        if (payParam) {
+          const matched = combinedLocal.find((b) => b.id === payParam);
+          if (matched && isBillMeaningful(matched)) {
+            setActiveBill((prev) =>
+              prev.id === payParam && isBillMeaningful(prev)
+                ? mergeTwoBillVersions(matched, prev)
+                : matched
+            );
+          }
+        } else if (combinedLocal.length > 0) {
           setActiveBill(combinedLocal[0]);
-        } else if (!payParam) {
+        } else {
           setActiveBill((prev) => {
             if (!getCreatedBillIds().includes(prev.id)) return prev;
             return {
@@ -559,14 +656,22 @@ export default function App() {
                 return merged;
               });
 
-              // If no local active bill yet, set the most recent Firestore bill
-              const payParam = new URLSearchParams(window.location.search).get('pay');
-              if (!payParam) {
+              const payParamNow = new URLSearchParams(window.location.search).get('pay');
+              if (payParamNow) {
+                const matchedFs = firestoreBills.find((b) => b.id === payParamNow);
+                if (matchedFs && isBillMeaningful(matchedFs)) {
+                  setActiveBill((prevActive) =>
+                    prevActive.id === payParamNow && isBillMeaningful(prevActive)
+                      ? mergeTwoBillVersions(matchedFs, prevActive)
+                      : matchedFs
+                  );
+                }
+              } else {
                 setSavedBills((current) => {
                   if (current.length > 0) {
                     setActiveBill((prevActive) => {
-                      // Only override if current active is empty/default
-                      const hasContent = Boolean(prevActive.title.trim()) ||
+                      const hasContent =
+                        Boolean(prevActive.title.trim()) ||
                         prevActive.items.length > 0 ||
                         (prevActive.travelItems && prevActive.travelItems.length > 0);
                       if (!hasContent && current.length > 0) {
@@ -596,6 +701,17 @@ export default function App() {
               `${BASE_STORAGE_KEY}_guest`,
               JSON.stringify(cleaned)
             );
+            const payParam = new URLSearchParams(window.location.search).get('pay');
+            if (payParam) {
+              const matchedGuest = cleaned.find((b) => b.id === payParam);
+              if (matchedGuest && isBillMeaningful(matchedGuest)) {
+                setActiveBill((prev) =>
+                  prev.id === payParam && isBillMeaningful(prev)
+                    ? mergeTwoBillVersions(matchedGuest, prev)
+                    : matchedGuest
+                );
+              }
+            }
           }
         } catch {
           // ignore
@@ -671,29 +787,73 @@ export default function App() {
 
     if (payBillId) {
       addVisitedBillId(payBillId);
-      let decodedFromUrl: SplitBill | null = null;
-      if (encodedData) {
-        decodedFromUrl = decodeBillFromUrlParam(encodedData);
-        if (decodedFromUrl) {
-          setActiveBill(decodedFromUrl);
-          setPortalParticipantId(participantParam);
-          setViewMode('portal');
-        }
+      setPortalParticipantId(participantParam);
+      setViewMode('portal');
+
+      const decodedFromUrl = encodedData ? decodeBillFromUrlParam(encodedData) : null;
+      const cachedLocal = findCachedBillInStorage(payBillId);
+      let bestLocal: SplitBill | null = null;
+      if (decodedFromUrl && cachedLocal) {
+        bestLocal = mergeTwoBillVersions(decodedFromUrl, cachedLocal);
+      } else if (decodedFromUrl && isBillMeaningful(decodedFromUrl)) {
+        bestLocal = decodedFromUrl;
+      } else if (cachedLocal && isBillMeaningful(cachedLocal)) {
+        bestLocal = cachedLocal;
       }
+
+      if (bestLocal) {
+        setActiveBill((prev) =>
+          prev.id === payBillId && isBillMeaningful(prev)
+            ? mergeTwoBillVersions(bestLocal!, prev)
+            : bestLocal!
+        );
+      }
+
+      const rehydrateServer = (billToPush: SplitBill) => {
+        if (!isBillMeaningful(billToPush)) return;
+        fetch('/api/bills', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(billToPush),
+        }).catch(() => {});
+      };
 
       fetch(`/api/bills/${payBillId}`)
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
-          if (data?.bill) {
-            setActiveBill(data.bill);
+          if (data?.bill && isBillMeaningful(data.bill)) {
+            setActiveBill((prev) => {
+              const merged =
+                prev.id === payBillId && isBillMeaningful(prev)
+                  ? mergeTwoBillVersions(data.bill, prev)
+                  : data.bill;
+              return merged;
+            });
             setPortalParticipantId(participantParam);
             setViewMode('portal');
-          } else if (decodedFromUrl) {
-            fetch('/api/bills', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(decodedFromUrl),
-            }).catch(() => {});
+          } else if (bestLocal) {
+            rehydrateServer(bestLocal);
+          }
+        })
+        .catch(() => {
+          if (bestLocal) {
+            rehydrateServer(bestLocal);
+          }
+        });
+
+      fetchBillByIdFromFirestore(payBillId)
+        .then((firestoreBill) => {
+          if (firestoreBill && isBillMeaningful(firestoreBill)) {
+            setActiveBill((prev) => {
+              const merged =
+                prev.id === payBillId && isBillMeaningful(prev)
+                  ? mergeTwoBillVersions(firestoreBill, prev)
+                  : firestoreBill;
+              rehydrateServer(merged);
+              return merged;
+            });
+            setPortalParticipantId(participantParam);
+            setViewMode('portal');
           }
         })
         .catch(() => {});
@@ -706,7 +866,7 @@ export default function App() {
     [activeBill, currentUser, isSharedLinkMode]
   );
 
-  // Sync activeBill into savedBills, localStorage (both Guest & Logged-in!), Express backend, and Firestore
+  // Sync activeBill into savedBills, localStorage (both Guest & Logged-in!), URL fallback, Express backend, and Firestore
   useEffect(() => {
     const hasContent =
       Boolean(activeBill.title.trim()) ||
@@ -722,11 +882,39 @@ export default function App() {
       const next = mergeBillsList([activeBill], prev);
       try {
         localStorage.setItem(storageKey, JSON.stringify(next));
+        const guestKey = `${BASE_STORAGE_KEY}_guest`;
+        if (storageKey !== guestKey) {
+          const rawGuest = localStorage.getItem(guestKey);
+          const parsedGuest = rawGuest ? JSON.parse(rawGuest) : [];
+          const mergedGuest = mergeBillsList(
+            [activeBill],
+            Array.isArray(parsedGuest) ? parsedGuest : []
+          );
+          localStorage.setItem(guestKey, JSON.stringify(mergedGuest));
+        }
       } catch {
         // ignore
       }
       return next;
     });
+
+    // When viewing a shared link (?pay=...), keep &d=... in the URL bar so refreshing never loses data
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('pay') === activeBill.id) {
+        const encoded = encodeBillToUrlParam(activeBill);
+        if (encoded && params.get('d') !== encoded) {
+          params.set('d', encoded);
+          window.history.replaceState(
+            {},
+            '',
+            `${window.location.pathname}?${params.toString()}`
+          );
+        }
+      }
+    } catch {
+      // ignore
+    }
 
     // Only the creator/owner of the bill is allowed to push full bill edits to the server
     if (!canEditActiveBill) return;
@@ -746,6 +934,9 @@ export default function App() {
         })
         .catch(() => {});
 
+      // Save full bill data to Firestore for cross-device sync and shared link access
+      saveFullBillToFirestore(activeBill).catch(() => {});
+
       if (currentUser && (!activeBill.ownerId || activeBill.ownerId === currentUser.uid)) {
         syncBillMetadataToFirestore({
           id: activeBill.id,
@@ -759,28 +950,43 @@ export default function App() {
           paidCount: summary.paidCount,
           participantCount: activeBill.participants.length,
         }).catch(() => {});
-
-        // Save full bill data to Firestore for cross-device sync
-        saveFullBillToFirestore(activeBill).catch(() => {});
       }
     }, 450);
 
     return () => clearTimeout(timer);
   }, [activeBill, canEditActiveBill, currentUser, storageKey, summary.grandTotal, summary.paidCount]);
 
+  const activeBillMeaningful = isBillMeaningful(activeBill);
+  const activeBillRef = useRef<SplitBill>(activeBill);
+  useEffect(() => {
+    activeBillRef.current = activeBill;
+  }, [activeBill]);
+
   // Real-time synchronization: Poll server every 2.5s for participant payment & proof updates
   useEffect(() => {
-    if (!activeBill.id || !isBillMeaningful(activeBill)) return;
+    if (!activeBill.id || !activeBillMeaningful) return;
 
     let isMounted = true;
 
     const syncLatestBillFromServer = async () => {
       try {
         const res = await fetch(`/api/bills/${activeBill.id}`);
+        if (res.status === 404) {
+          // Serverless instance rotated or cold-started — re-hydrate it with our current meaningful bill
+          const snapshot = activeBillRef.current;
+          if (snapshot && snapshot.id === activeBill.id && isBillMeaningful(snapshot)) {
+            fetch('/api/bills', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(snapshot),
+            }).catch(() => {});
+          }
+          return;
+        }
         if (!res.ok) return;
         const data = await res.json();
         const serverBill: SplitBill | undefined = data?.bill;
-        if (!serverBill || !isMounted) return;
+        if (!serverBill || !isBillMeaningful(serverBill) || !isMounted) return;
 
         setActiveBill((current) => {
           if (current.id !== serverBill.id) return current;
@@ -807,8 +1013,8 @@ export default function App() {
                 paidAt: serverP.paidAt,
                 paidVia: serverP.paidVia || p.paidVia,
                 paidNote: serverP.paidNote !== undefined ? serverP.paidNote : p.paidNote,
-                proofImageUrl: serverP.proofImageUrl,
-                proofRefNumber: serverP.proofRefNumber,
+                proofImageUrl: serverP.proofImageUrl || p.proofImageUrl,
+                proofRefNumber: serverP.proofRefNumber || p.proofRefNumber,
                 userId: serverP.userId || p.userId,
                 email: serverP.email || p.email,
                 photoURL: serverP.photoURL || p.photoURL,
@@ -822,10 +1028,10 @@ export default function App() {
             const serverUpdated = new Date(serverBill.updatedAt || 0).getTime();
             const currentUpdated = new Date(current.updatedAt || 0).getTime();
             if (serverUpdated > currentUpdated || hasChanges) {
-              return {
-                ...serverBill,
-                participants: mergedParticipants,
-              };
+              return mergeTwoBillVersions(
+                { ...serverBill, participants: mergedParticipants },
+                current
+              );
             }
           }
 
@@ -857,7 +1063,7 @@ export default function App() {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [activeBill.id, canEditActiveBill]);
+  }, [activeBill.id, activeBillMeaningful, canEditActiveBill]);
 
   const handleCopyText = async (text: string, id: string) => {
     try {
@@ -1132,34 +1338,40 @@ export default function App() {
   const handleClaimParticipant = (participantId: string) => {
     if (!currentUser) return;
 
-    setActiveBill((prev) => ({
-      ...prev,
-      participants: prev.participants.map((p) =>
-        p.id === participantId
-          ? {
-              ...p,
-              userId: currentUser.uid,
-              email: currentUser.email?.toLowerCase() || p.email,
-              photoURL: currentUser.photoURL || p.photoURL,
-            }
-          : p
-      ),
-    }));
+    setActiveBill((prev) => {
+      const updatedBill: SplitBill = {
+        ...prev,
+        updatedAt: new Date().toISOString(),
+        participants: prev.participants.map((p) =>
+          p.id === participantId
+            ? {
+                ...p,
+                userId: currentUser.uid,
+                email: currentUser.email?.toLowerCase() || p.email,
+                photoURL: currentUser.photoURL || p.photoURL,
+              }
+            : p
+        ),
+      };
 
-    fetch(`/api/bills/${activeBill.id}/claim`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        participantId,
-        userId: currentUser.uid,
-        email: currentUser.email,
-        displayName: currentUser.displayName,
-        photoURL: currentUser.photoURL,
-        billSnapshot: activeBill,
-      }),
-    })
-      .then(() => syncBillsFromServer(currentUser))
-      .catch(() => {});
+      fetch(`/api/bills/${prev.id}/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          participantId,
+          userId: currentUser.uid,
+          email: currentUser.email,
+          displayName: currentUser.displayName,
+          photoURL: currentUser.photoURL,
+          billSnapshot: updatedBill,
+        }),
+      })
+        .then(() => syncBillsFromServer(currentUser))
+        .catch(() => {});
+
+      saveFullBillToFirestore(updatedBill).catch(() => {});
+      return updatedBill;
+    });
   };
 
   const handleRemoveParticipant = (participantId: string) => {
@@ -1188,6 +1400,7 @@ export default function App() {
     setActiveBill((prev) => {
       const updatedBill: SplitBill = {
         ...prev,
+        updatedAt: new Date().toISOString(),
         participants: prev.participants.map((p) =>
           p.id === participantId
             ? {
@@ -1236,6 +1449,8 @@ export default function App() {
       }).catch((err) => {
         console.warn('Gagal sinkron status bayar ke server:', err);
       });
+
+      saveFullBillToFirestore(updatedBill).catch(() => {});
 
       return updatedBill;
     });

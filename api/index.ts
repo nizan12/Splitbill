@@ -9,15 +9,34 @@ app.use(express.json({ limit: "15mb" }));
 
 // In Vercel / serverless environments, process.cwd() is read-only, so use os.tmpdir()
 const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const SEED_DATA_DIR = path.resolve(process.cwd(), "data");
+const SEED_BILLS_FILE = path.join(SEED_DATA_DIR, "bills.json");
+const SEED_USERS_FILE = path.join(SEED_DATA_DIR, "users.json");
 const DATA_DIR = isServerless
   ? path.join(os.tmpdir(), "patunganpay-data")
-  : path.resolve(process.cwd(), "data");
+  : SEED_DATA_DIR;
 const BILLS_FILE = path.join(DATA_DIR, "bills.json");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 
 // In-memory fallback
 const memoryBills: Record<string, any> = {};
 const memoryUsers: Record<string, any> = {};
+const deletedBillIds = new Set<string>();
+
+function readJsonFileSafe(filePath: string): Record<string, any> {
+  try {
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, "utf-8");
+      const parsed = JSON.parse(raw || "{}");
+      if (parsed && typeof parsed === "object") {
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return {};
+}
 
 function ensureDataDir() {
   try {
@@ -25,10 +44,12 @@ function ensureDataDir() {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
     if (!fs.existsSync(BILLS_FILE)) {
-      fs.writeFileSync(BILLS_FILE, JSON.stringify({}), "utf-8");
+      const seedBills = isServerless ? readJsonFileSafe(SEED_BILLS_FILE) : {};
+      fs.writeFileSync(BILLS_FILE, JSON.stringify(seedBills, null, 2), "utf-8");
     }
     if (!fs.existsSync(USERS_FILE)) {
-      fs.writeFileSync(USERS_FILE, JSON.stringify({}), "utf-8");
+      const seedUsers = isServerless ? readJsonFileSafe(SEED_USERS_FILE) : {};
+      fs.writeFileSync(USERS_FILE, JSON.stringify(seedUsers, null, 2), "utf-8");
     }
   } catch {
     // If filesystem is restricted, memory objects serve as fallback
@@ -36,17 +57,19 @@ function ensureDataDir() {
 }
 
 function readBills(): Record<string, any> {
+  const seed = isServerless ? readJsonFileSafe(SEED_BILLS_FILE) : {};
+  let disk: Record<string, any> = {};
   try {
     ensureDataDir();
-    if (fs.existsSync(BILLS_FILE)) {
-      const raw = fs.readFileSync(BILLS_FILE, "utf-8");
-      const parsed = JSON.parse(raw || "{}");
-      return { ...memoryBills, ...parsed };
-    }
+    disk = readJsonFileSafe(BILLS_FILE);
   } catch {
     // fallback
   }
-  return memoryBills;
+  const combined: Record<string, any> = { ...seed, ...disk, ...memoryBills };
+  for (const id of deletedBillIds) {
+    delete combined[id];
+  }
+  return combined;
 }
 
 function writeBills(bills: Record<string, any>) {
@@ -60,17 +83,15 @@ function writeBills(bills: Record<string, any>) {
 }
 
 function readUsers(): Record<string, any> {
+  const seed = isServerless ? readJsonFileSafe(SEED_USERS_FILE) : {};
+  let disk: Record<string, any> = {};
   try {
     ensureDataDir();
-    if (fs.existsSync(USERS_FILE)) {
-      const raw = fs.readFileSync(USERS_FILE, "utf-8");
-      const parsed = JSON.parse(raw || "{}");
-      return { ...memoryUsers, ...parsed };
-    }
+    disk = readJsonFileSafe(USERS_FILE);
   } catch {
     // fallback
   }
-  return memoryUsers;
+  return { ...seed, ...disk, ...memoryUsers };
 }
 
 function writeUsers(users: Record<string, any>) {
@@ -84,6 +105,14 @@ function writeUsers(users: Record<string, any>) {
 }
 
 export const apiRouter = express.Router();
+
+// Prevent stale caching of bill responses across refreshes or CDN edges
+apiRouter.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  next();
+});
 
 apiRouter.get("/", (_req, res) => {
   res.json({ status: "ok", app: "PatunganPay API" });
@@ -267,6 +296,7 @@ apiRouter.get("/bills/:id", (req, res) => {
 apiRouter.delete("/bills/:id", (req, res) => {
   try {
     const billId = req.params.id;
+    deletedBillIds.add(billId);
     const bills = readBills();
     delete bills[billId];
     delete memoryBills[billId];
@@ -290,6 +320,7 @@ apiRouter.post("/bills", (req, res) => {
       res.status(400).json({ error: "Data tagihan tidak valid." });
       return;
     }
+    deletedBillIds.delete(bill.id);
 
     // Automatically match participant emails against registered users if userId isn't set yet
     const users = readUsers();
@@ -348,10 +379,26 @@ apiRouter.post("/bills", (req, res) => {
       });
     }
 
+    if (existingBill && Array.isArray(existingBill.paymentChannels) && Array.isArray(bill.paymentChannels)) {
+      bill.paymentChannels = bill.paymentChannels.map((incomingCh: any) => {
+        const existingCh = existingBill.paymentChannels.find(
+          (c: any) => c.id === incomingCh.id || (c.provider === "QRIS" && incomingCh.provider === "QRIS")
+        );
+        if (existingCh) {
+          return {
+            ...incomingCh,
+            qrisImageUrl: incomingCh.qrisImageUrl || existingCh.qrisImageUrl,
+            qrisRawString: incomingCh.qrisRawString || existingCh.qrisRawString,
+          };
+        }
+        return incomingCh;
+      });
+    }
+
     bills[bill.id] = {
       ...existingBill,
       ...bill,
-      updatedAt: new Date().toISOString(),
+      updatedAt: bill.updatedAt || new Date().toISOString(),
     };
     writeBills(bills);
     res.json({ bill: bills[bill.id] });

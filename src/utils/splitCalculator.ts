@@ -280,12 +280,20 @@ export function encodeBillToUrlParam(bill: SplitBill): string {
       g: bill.category || '',
       m: bill.mode === 'equal' ? 'e' : 'i',
       r: bill.extraRule === 'equal' ? 'e' : 'p',
+      em: bill.equalManualSubtotal || 0,
       tp: bill.taxPercent || 0,
       ta: bill.taxAmount || 0,
+      ut: bill.useTaxPercent ? 1 : 0,
       sp: bill.servicePercent || 0,
       sa: bill.serviceAmount || 0,
+      us: bill.useServicePercent ? 1 : 0,
       dl: bill.deliveryAmount || 0,
       ds: bill.discountAmount || 0,
+      nt: bill.notes || '',
+      oi: bill.ownerId || '',
+      oe: bill.ownerEmail || '',
+      ca: bill.createdAt || '',
+      ua: bill.updatedAt || '',
       k: (bill.paymentChannels || [])
         .filter((c) => c.enabled)
         .map((c) => [
@@ -302,6 +310,12 @@ export function encodeBillToUrlParam(bill: SplitBill): string {
         p.paidVia || '',
         p.paidAt || '',
         p.phoneOrHandle || '',
+        p.equalPortions || 1,
+        p.email || '',
+        p.userId || '',
+        p.photoURL && !p.photoURL.startsWith('data:') ? p.photoURL : '',
+        p.paidNote || '',
+        p.proofRefNumber || '',
       ]),
       it: (bill.items || []).map((it) => [
         it.id,
@@ -352,18 +366,24 @@ export function decodeBillFromUrlParam(encoded: string): SplitBill | null {
         creatorName: parsed.c || '',
         date: parsed.d || new Date().toISOString().slice(0, 10),
         category: parsed.g || 'Makan & Minum',
-        createdAt: new Date().toISOString(),
+        createdAt: parsed.ca || new Date().toISOString(),
+        updatedAt: parsed.ua || parsed.ca || new Date().toISOString(),
+        ownerId: parsed.oi || undefined,
+        ownerEmail: parsed.oe || undefined,
         mode: parsed.m === 'e' ? 'equal' : 'itemized',
         extraRule: parsed.r === 'e' ? 'equal' : 'proportional',
+        equalManualSubtotal: Number(parsed.em) || 0,
         taxPercent: Number(parsed.tp) || 0,
         taxAmount: Number(parsed.ta) || 0,
-        useTaxPercent: Boolean(parsed.tp),
+        useTaxPercent:
+          parsed.ut !== undefined ? Boolean(parsed.ut) : Boolean(parsed.tp),
         servicePercent: Number(parsed.sp) || 0,
         serviceAmount: Number(parsed.sa) || 0,
-        useServicePercent: Boolean(parsed.sp),
+        useServicePercent:
+          parsed.us !== undefined ? Boolean(parsed.us) : Boolean(parsed.sp),
         deliveryAmount: Number(parsed.dl) || 0,
         discountAmount: Number(parsed.ds) || 0,
-        notes: '',
+        notes: parsed.nt || '',
         paymentChannels: Array.isArray(parsed.k)
           ? parsed.k.map((c: any) => ({
               id: c[0] || `ch-${Math.random().toString(36).slice(2, 6)}`,
@@ -382,6 +402,12 @@ export function decodeBillFromUrlParam(encoded: string): SplitBill | null {
               paidVia: p[3] || undefined,
               paidAt: p[4] || undefined,
               phoneOrHandle: p[5] || undefined,
+              equalPortions: Number(p[6]) || 1,
+              email: p[7] || undefined,
+              userId: p[8] || undefined,
+              photoURL: p[9] || undefined,
+              paidNote: p[10] || undefined,
+              proofRefNumber: p[11] || undefined,
             }))
           : [],
         items: Array.isArray(parsed.it)
@@ -413,7 +439,7 @@ export function decodeBillFromUrlParam(encoded: string): SplitBill | null {
 export function buildShareablePaymentLink(
   bill: SplitBill,
   participantId?: string,
-  includeDataFallback: boolean = false
+  includeDataFallback: boolean = true
 ): string {
   const baseUrl =
     typeof window !== 'undefined' && window.location

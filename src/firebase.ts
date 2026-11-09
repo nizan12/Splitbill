@@ -13,6 +13,7 @@ import {
 import {
   getFirestore,
   doc,
+  getDoc,
   setDoc,
   deleteDoc,
   getDocFromServer,
@@ -220,37 +221,69 @@ export async function deleteBillFromFirestore(billId: string) {
  * under a separate `billData` collection so it can be synced across devices.
  */
 export async function saveFullBillToFirestore(bill: any) {
-  if (!bill?.id || !auth.currentUser) return;
-  const path = `billData/${bill.id}`;
+  if (!bill?.id) return;
   try {
-    // Strip proof images to stay under Firestore 1MB doc limit.
-    // proofImageUrl is a base64 data URL that can be huge.
-    const sanitizedParticipants = (bill.participants || []).map((p: any) => ({
-      ...p,
-      proofImageUrl: undefined,
-    }));
+    // Strip undefined fields (Firestore rejects explicit undefined values)
+    let cleanBill = JSON.parse(JSON.stringify(bill));
 
-    // Strip QRIS images from channels too
-    const sanitizedChannels = (bill.paymentChannels || []).map((c: any) => ({
-      ...c,
-      qrisImageUrl: undefined,
-    }));
+    // Only strip base64 images if total payload approaches Firestore's 1MB limit
+    if (JSON.stringify(cleanBill).length > 750000) {
+      cleanBill.participants = (cleanBill.participants || []).map((p: any) => {
+        const copy = { ...p };
+        delete copy.proofImageUrl;
+        return copy;
+      });
+      cleanBill.paymentChannels = (cleanBill.paymentChannels || []).map((c: any) => {
+        const copy = { ...c };
+        delete copy.qrisImageUrl;
+        return copy;
+      });
+    }
 
-    await setDoc(
-      doc(db, 'billData', bill.id),
-      {
-        ...bill,
-        participants: sanitizedParticipants,
-        paymentChannels: sanitizedChannels,
-        ownerId: bill.ownerId || auth.currentUser.uid,
-        ownerEmail: (bill.ownerEmail || auth.currentUser.email || '').toLowerCase(),
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
+    const payload: Record<string, any> = {
+      ...cleanBill,
+      updatedAt: serverTimestamp(),
+    };
+    if (cleanBill.ownerId || auth.currentUser?.uid) {
+      payload.ownerId = cleanBill.ownerId || auth.currentUser?.uid;
+    }
+    if (cleanBill.ownerEmail || auth.currentUser?.email) {
+      payload.ownerEmail = String(
+        cleanBill.ownerEmail || auth.currentUser?.email || ''
+      ).toLowerCase();
+    }
+
+    await setDoc(doc(db, 'billData', bill.id), payload, { merge: true });
   } catch (error) {
-    // Don't crash the app if Firestore write fails – fallback to Express
+    // Don't crash the app if Firestore write fails – fallback to Express & URL data
     console.warn('saveFullBillToFirestore failed:', error);
+  }
+}
+
+/**
+ * Fetch a single full bill document by ID from Firestore (used when opening shared links).
+ */
+export async function fetchBillByIdFromFirestore(billId: string): Promise<any | null> {
+  if (!billId) return null;
+  try {
+    const snap = await getDoc(doc(db, 'billData', billId));
+    if (!snap.exists()) return null;
+    const data = snap.data();
+    if (!data || !data.id) return null;
+    return {
+      ...data,
+      updatedAt:
+        data.updatedAt?.toDate?.()?.toISOString?.() ||
+        data.updatedAt ||
+        new Date().toISOString(),
+      createdAt:
+        data.createdAt?.toDate?.()?.toISOString?.() ||
+        data.createdAt ||
+        new Date().toISOString(),
+    };
+  } catch (error) {
+    console.warn('fetchBillByIdFromFirestore failed:', error);
+    return null;
   }
 }
 
