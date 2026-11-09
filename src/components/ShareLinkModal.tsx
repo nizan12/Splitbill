@@ -34,11 +34,11 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [selectedParticipantId, setSelectedParticipantId] = useState<string>('all');
 
-  // Immediate base direct link with embedded fallback data so any device can open it reliably
+  // Immediate base direct link (e.g. https://domain/?pay=sb-123&p=p-1) backed by Firestore
   const directLink = buildShareablePaymentLink(
     bill,
     selectedParticipantId === 'all' ? undefined : selectedParticipantId,
-    true
+    false
   );
 
   const displayLink = directLink;

@@ -17,6 +17,7 @@ import {
   setDoc,
   deleteDoc,
   getDocFromServer,
+  onSnapshot,
   collection,
   query,
   where,
@@ -284,6 +285,42 @@ export async function fetchBillByIdFromFirestore(billId: string): Promise<any | 
   } catch (error) {
     console.warn('fetchBillByIdFromFirestore failed:', error);
     return null;
+  }
+}
+
+/**
+ * Subscribe to real-time updates of a bill document in Firestore.
+ */
+export function subscribeToBillInFirestore(
+  billId: string,
+  onBillData: (bill: any) => void
+): () => void {
+  if (!billId) return () => {};
+  try {
+    return onSnapshot(
+      doc(db, 'billData', billId),
+      (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        if (!data || !data.id) return;
+        onBillData({
+          ...data,
+          updatedAt:
+            data.updatedAt?.toDate?.()?.toISOString?.() ||
+            data.updatedAt ||
+            new Date().toISOString(),
+          createdAt:
+            data.createdAt?.toDate?.()?.toISOString?.() ||
+            data.createdAt ||
+            new Date().toISOString(),
+        });
+      },
+      (err) => {
+        console.warn('subscribeToBillInFirestore error:', err);
+      }
+    );
+  } catch {
+    return () => {};
   }
 }
 

@@ -439,7 +439,7 @@ export function decodeBillFromUrlParam(encoded: string): SplitBill | null {
 export function buildShareablePaymentLink(
   bill: SplitBill,
   participantId?: string,
-  includeDataFallback: boolean = true
+  includeDataFallback: boolean = false
 ): string {
   const baseUrl =
     typeof window !== 'undefined' && window.location

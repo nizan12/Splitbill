@@ -34,6 +34,7 @@ interface FriendPaymentPortalProps {
   bill: SplitBill;
   summary: BillCalculationSummary;
   initialParticipantId?: string;
+  isLoading?: boolean;
   canEdit?: boolean;
   currentUser?: User | null;
   onLoginGoogle?: () => void;
@@ -75,6 +76,7 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
   bill,
   summary,
   initialParticipantId,
+  isLoading = false,
   canEdit = false,
   currentUser,
   onLoginGoogle,
@@ -123,6 +125,23 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
   const proofFileRef = useRef<HTMLInputElement>(null);
   const [isProcessingProof, setIsProcessingProof] = useState<boolean>(false);
 
+  // When bill data arrives asynchronously, select initialParticipantId or defaultParticipant
+  useEffect(() => {
+    if (
+      initialParticipantId &&
+      summary.participantBreakdowns.some((b) => b.participant.id === initialParticipantId)
+    ) {
+      setSelectedId(initialParticipantId);
+      return;
+    }
+    if (
+      defaultParticipant?.participant.id &&
+      !summary.participantBreakdowns.some((b) => b.participant.id === selectedId)
+    ) {
+      setSelectedId(defaultParticipant.participant.id);
+    }
+  }, [initialParticipantId, defaultParticipant?.participant.id, summary.participantBreakdowns, selectedId]);
+
   const activeBreakdown =
     summary.participantBreakdowns.find((b) => b.participant.id === selectedId) ||
     summary.participantBreakdowns[0];
@@ -162,6 +181,22 @@ export const FriendPaymentPortal: React.FC<FriendPaymentPortalProps> = ({
   };
 
   if (!activeBreakdown) {
+    if (isLoading) {
+      return (
+        <div className="max-w-3xl mx-auto px-3 sm:px-6 py-12">
+          <div className="glass-panel rounded-3xl p-6 sm:p-10 text-center space-y-3 shadow-lg">
+            <div className="w-8 h-8 rounded-full border-3 border-[#00AED6] border-t-transparent animate-spin mx-auto" />
+            <h1 className="text-base sm:text-lg font-extrabold text-slate-900 font-display">
+              Memuat Rincian Split Bill...
+            </h1>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Mohon tunggu sebentar, sedang mengambil data tagihan dan pesanan.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-3xl mx-auto px-3 sm:px-6 py-8">
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-2xs">

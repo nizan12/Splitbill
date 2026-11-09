@@ -61,6 +61,7 @@ import {
   deleteBillFromFirestore,
   saveFullBillToFirestore,
   fetchBillByIdFromFirestore,
+  subscribeToBillInFirestore,
   fetchUserBillsFromFirestore,
   deleteFullBillFromFirestore,
   User,
@@ -313,6 +314,16 @@ export default function App() {
   const [isSharedLinkMode, setIsSharedLinkMode] = useState<boolean>(() =>
     Boolean(new URLSearchParams(window.location.search).get('pay'))
   );
+  const [isLoadingSharedBill, setIsLoadingSharedBill] = useState<boolean>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payBillId = params.get('pay');
+    if (!payBillId) return false;
+    const encodedData = params.get('d');
+    if (encodedData && decodeBillFromUrlParam(encodedData)) return false;
+    const cached = findCachedBillInStorage(payBillId);
+    if (cached && isBillMeaningful(cached)) return false;
+    return true;
+  });
 
   const storageKey = currentUser
     ? `${BASE_STORAGE_KEY}_${currentUser.uid}`
@@ -612,6 +623,11 @@ export default function App() {
               mergeBillsList(Array.isArray(parsedGuest) ? parsedGuest : [], [])
             )
           );
+          combinedLocal.forEach((b) => {
+            if (isBillMeaningful(b)) {
+              saveFullBillToFirestore(b).catch(() => {});
+            }
+          });
         } catch {
           // ignore
         }
@@ -807,6 +823,22 @@ export default function App() {
             ? mergeTwoBillVersions(bestLocal!, prev)
             : bestLocal!
         );
+        setIsLoadingSharedBill(false);
+      }
+
+      // If opened via a legacy long link with &d=..., persist to Firestore and shorten the URL bar immediately
+      if (decodedFromUrl && isBillMeaningful(decodedFromUrl)) {
+        saveFullBillToFirestore(decodedFromUrl).catch(() => {});
+        try {
+          params.delete('d');
+          window.history.replaceState(
+            {},
+            '',
+            `${window.location.pathname}?${params.toString()}`
+          );
+        } catch {
+          // ignore
+        }
       }
 
       const rehydrateServer = (billToPush: SplitBill) => {
@@ -816,6 +848,14 @@ export default function App() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(billToPush),
         }).catch(() => {});
+      };
+
+      let pendingFetches = 2;
+      const markFetchDone = () => {
+        pendingFetches -= 1;
+        if (pendingFetches <= 0) {
+          setIsLoadingSharedBill(false);
+        }
       };
 
       fetch(`/api/bills/${payBillId}`)
@@ -831,6 +871,7 @@ export default function App() {
             });
             setPortalParticipantId(participantParam);
             setViewMode('portal');
+            setIsLoadingSharedBill(false);
           } else if (bestLocal) {
             rehydrateServer(bestLocal);
           }
@@ -839,7 +880,8 @@ export default function App() {
           if (bestLocal) {
             rehydrateServer(bestLocal);
           }
-        });
+        })
+        .finally(markFetchDone);
 
       fetchBillByIdFromFirestore(payBillId)
         .then((firestoreBill) => {
@@ -854,9 +896,13 @@ export default function App() {
             });
             setPortalParticipantId(participantParam);
             setViewMode('portal');
+            setIsLoadingSharedBill(false);
+          } else if (bestLocal) {
+            saveFullBillToFirestore(bestLocal).catch(() => {});
           }
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(markFetchDone);
     }
   }, []);
 
@@ -866,7 +912,7 @@ export default function App() {
     [activeBill, currentUser, isSharedLinkMode]
   );
 
-  // Sync activeBill into savedBills, localStorage (both Guest & Logged-in!), URL fallback, Express backend, and Firestore
+  // Sync activeBill into savedBills, localStorage (both Guest & Logged-in!), Express backend, and Firestore
   useEffect(() => {
     const hasContent =
       Boolean(activeBill.title.trim()) ||
@@ -897,24 +943,6 @@ export default function App() {
       }
       return next;
     });
-
-    // When viewing a shared link (?pay=...), keep &d=... in the URL bar so refreshing never loses data
-    try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('pay') === activeBill.id) {
-        const encoded = encodeBillToUrlParam(activeBill);
-        if (encoded && params.get('d') !== encoded) {
-          params.set('d', encoded);
-          window.history.replaceState(
-            {},
-            '',
-            `${window.location.pathname}?${params.toString()}`
-          );
-        }
-      }
-    } catch {
-      // ignore
-    }
 
     // Only the creator/owner of the bill is allowed to push full bill edits to the server
     if (!canEditActiveBill) return;
@@ -962,17 +990,87 @@ export default function App() {
     activeBillRef.current = activeBill;
   }, [activeBill]);
 
-  // Real-time synchronization: Poll server every 2.5s for participant payment & proof updates
+  // Real-time synchronization via Firestore onSnapshot + Express backend fallback
   useEffect(() => {
-    if (!activeBill.id || !activeBillMeaningful) return;
+    if (!activeBill.id) return;
 
     let isMounted = true;
 
+    const mergeIncomingBill = (incomingBill: SplitBill) => {
+      if (!incomingBill || !isBillMeaningful(incomingBill) || !isMounted) return;
+      setIsLoadingSharedBill(false);
+
+      setActiveBill((current) => {
+        if (current.id !== incomingBill.id) return current;
+        if (!isBillMeaningful(current)) return incomingBill;
+
+        let hasChanges = false;
+        const mergedParticipants = current.participants.map((p) => {
+          const serverP = (incomingBill.participants || []).find((sp) => sp.id === p.id);
+          if (!serverP) return p;
+
+          if (
+            serverP.status !== p.status ||
+            serverP.paidAt !== p.paidAt ||
+            serverP.proofImageUrl !== p.proofImageUrl ||
+            serverP.proofRefNumber !== p.proofRefNumber ||
+            serverP.paidVia !== p.paidVia ||
+            serverP.paidNote !== p.paidNote ||
+            serverP.userId !== p.userId ||
+            serverP.photoURL !== p.photoURL
+          ) {
+            hasChanges = true;
+            return {
+              ...p,
+              status: serverP.status,
+              paidAt: serverP.paidAt,
+              paidVia: serverP.paidVia || p.paidVia,
+              paidNote: serverP.paidNote !== undefined ? serverP.paidNote : p.paidNote,
+              proofImageUrl: serverP.proofImageUrl || p.proofImageUrl,
+              proofRefNumber: serverP.proofRefNumber || p.proofRefNumber,
+              userId: serverP.userId || p.userId,
+              email: serverP.email || p.email,
+              photoURL: serverP.photoURL || p.photoURL,
+            };
+          }
+          return p;
+        });
+
+        // In portal mode (shared view), also accept any menu/bill updates made by creator
+        if (!canEditActiveBill) {
+          const serverUpdated = new Date(incomingBill.updatedAt || 0).getTime();
+          const currentUpdated = new Date(current.updatedAt || 0).getTime();
+          if (serverUpdated > currentUpdated || hasChanges) {
+            return mergeTwoBillVersions(
+              { ...incomingBill, participants: mergedParticipants },
+              current
+            );
+          }
+        }
+
+        if (hasChanges) {
+          return {
+            ...current,
+            participants: mergedParticipants,
+          };
+        }
+
+        return current;
+      });
+    };
+
+    const unsubscribeFirestore = subscribeToBillInFirestore(
+      activeBill.id,
+      (firestoreBill) => {
+        mergeIncomingBill(firestoreBill);
+      }
+    );
+
     const syncLatestBillFromServer = async () => {
+      if (!activeBillMeaningful) return;
       try {
         const res = await fetch(`/api/bills/${activeBill.id}`);
         if (res.status === 404) {
-          // Serverless instance rotated or cold-started — re-hydrate it with our current meaningful bill
           const snapshot = activeBillRef.current;
           if (snapshot && snapshot.id === activeBill.id && isBillMeaningful(snapshot)) {
             fetch('/api/bills', {
@@ -986,64 +1084,9 @@ export default function App() {
         if (!res.ok) return;
         const data = await res.json();
         const serverBill: SplitBill | undefined = data?.bill;
-        if (!serverBill || !isBillMeaningful(serverBill) || !isMounted) return;
-
-        setActiveBill((current) => {
-          if (current.id !== serverBill.id) return current;
-
-          let hasChanges = false;
-          const mergedParticipants = current.participants.map((p) => {
-            const serverP = (serverBill.participants || []).find((sp) => sp.id === p.id);
-            if (!serverP) return p;
-
-            if (
-              serverP.status !== p.status ||
-              serverP.paidAt !== p.paidAt ||
-              serverP.proofImageUrl !== p.proofImageUrl ||
-              serverP.proofRefNumber !== p.proofRefNumber ||
-              serverP.paidVia !== p.paidVia ||
-              serverP.paidNote !== p.paidNote ||
-              serverP.userId !== p.userId ||
-              serverP.photoURL !== p.photoURL
-            ) {
-              hasChanges = true;
-              return {
-                ...p,
-                status: serverP.status,
-                paidAt: serverP.paidAt,
-                paidVia: serverP.paidVia || p.paidVia,
-                paidNote: serverP.paidNote !== undefined ? serverP.paidNote : p.paidNote,
-                proofImageUrl: serverP.proofImageUrl || p.proofImageUrl,
-                proofRefNumber: serverP.proofRefNumber || p.proofRefNumber,
-                userId: serverP.userId || p.userId,
-                email: serverP.email || p.email,
-                photoURL: serverP.photoURL || p.photoURL,
-              };
-            }
-            return p;
-          });
-
-          // In portal mode (shared view), also accept any menu/bill updates made by creator
-          if (!canEditActiveBill) {
-            const serverUpdated = new Date(serverBill.updatedAt || 0).getTime();
-            const currentUpdated = new Date(current.updatedAt || 0).getTime();
-            if (serverUpdated > currentUpdated || hasChanges) {
-              return mergeTwoBillVersions(
-                { ...serverBill, participants: mergedParticipants },
-                current
-              );
-            }
-          }
-
-          if (hasChanges) {
-            return {
-              ...current,
-              participants: mergedParticipants,
-            };
-          }
-
-          return current;
-        });
+        if (serverBill) {
+          mergeIncomingBill(serverBill);
+        }
       } catch {
         // silent on network error
       }
@@ -1056,10 +1099,11 @@ export default function App() {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    const interval = setInterval(syncLatestBillFromServer, 2500);
+    const interval = setInterval(syncLatestBillFromServer, 3500);
 
     return () => {
       isMounted = false;
+      unsubscribeFirestore();
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
@@ -1890,6 +1934,7 @@ export default function App() {
             summary={summary}
             initialParticipantId={portalParticipantId}
             canEdit={canEditActiveBill}
+            isLoading={isLoadingSharedBill}
             currentUser={currentUser}
             onLoginGoogle={handleGoogleLogin}
             onClaimParticipant={handleClaimParticipant}
